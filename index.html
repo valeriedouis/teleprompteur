@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Téléprompteur VD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --nuit:#13294B; --nuit2:#0d1d36; --coquille:#F6F1EC; --lin:#DCCFBF;
+    --rose:#D2AFA8; --rose-fort:#8C5A55; --mauve:#BDAAB4;
+    --font: "Jost", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--nuit2);color:var(--coquille);font-family:var(--font);font-weight:300;overflow:hidden}
+  button,select,input,textarea{font-family:inherit}
+  button{cursor:pointer}
+
+  /* Barre du haut */
+  #top{position:fixed;top:0;left:0;right:0;height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;
+       background:var(--nuit);border-bottom:1px solid rgba(220,207,191,.18);z-index:20}
+  #brand{display:flex;align-items:center;gap:10px;font-weight:500;letter-spacing:.06em;white-space:nowrap}
+  #brand .mono{width:30px;height:30px;border-radius:50%;border:1px solid var(--lin);display:grid;place-items:center;font-size:13px;letter-spacing:0}
+  #top select{background:var(--nuit2);color:var(--coquille);border:1px solid rgba(220,207,191,.35);border-radius:8px;padding:7px 10px;font-size:14px;max-width:340px}
+  #scriptInfo{font-size:13px;color:var(--lin);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .spacer{flex:1}
+  .btn{background:transparent;color:var(--coquille);border:1px solid rgba(220,207,191,.4);border-radius:999px;padding:7px 14px;font-size:14px;white-space:nowrap}
+  .btn:hover{border-color:var(--coquille)}
+  .btn.plein{background:var(--coquille);color:var(--nuit);border-color:var(--coquille);font-weight:500}
+  .btn.rose{background:var(--rose);color:var(--nuit);border-color:var(--rose);font-weight:500}
+
+  /* Scène */
+  #stage{position:fixed;top:56px;left:0;right:0;bottom:0}
+  #bgVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+  #bgDim{position:absolute;inset:0;background:rgba(13,29,54,.62);display:none}
+  body.camfond #bgVideo, body.camfond #bgDim{display:block}
+  body.camfond #preview{display:none}
+
+  /* Zone de texte, en haut, près de l'objectif */
+  #prompter{position:absolute;top:0;left:50%;transform:translateX(-50%);height:64%;width:var(--col,62%);overflow:hidden;
+            -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 9%,#000 82%,transparent 100%);
+                    mask-image:linear-gradient(to bottom,transparent 0,#000 9%,#000 82%,transparent 100%)}
+  #textWrap{position:absolute;left:0;right:0;top:0;will-change:transform}
+  #text{font-size:var(--fs,54px);line-height:1.42;font-weight:400;text-align:var(--align,center);padding-bottom:70vh}
+  #text p{margin:0 0 .55em}
+  #text .indic{display:block;font-style:italic;font-weight:300;font-size:.5em;color:var(--rose);letter-spacing:.02em;margin:0 0 .6em}
+  body.miroir #textWrap{transform-origin:center}
+  body.miroir #prompter{transform:translateX(-50%) scaleX(-1)}
+  #readLine{position:absolute;left:50%;transform:translateX(-50%);width:calc(var(--col,62%) + 60px);top:var(--rl,18%);height:0;pointer-events:none}
+  #readLine::before,#readLine::after{content:"";position:absolute;top:-9px;border:9px solid transparent}
+  #readLine::before{left:0;border-left:12px solid var(--rose)}
+  #readLine::after{right:0;border-right:12px solid var(--rose)}
+
+  /* Aperçu caméra 9:16 */
+  #preview{position:absolute;right:20px;bottom:86px;height:min(46vh,560px);aspect-ratio:9/16;border-radius:14px;overflow:hidden;
+           background:#000;border:1px solid rgba(220,207,191,.35)}
+  #preview.paysage{aspect-ratio:16/9;height:auto;width:min(34vw,520px)}
+  #camVideo{width:100%;height:100%;object-fit:cover;display:block}
+  body.selfie #camVideo, body.selfie #bgVideo{transform:scaleX(-1)}
+  #recBadge{position:absolute;top:10px;left:10px;display:none;align-items:center;gap:6px;background:rgba(13,29,54,.75);padding:4px 10px;border-radius:999px;font-size:14px;font-weight:500}
+  #recBadge i{width:10px;height:10px;border-radius:50%;background:#e5484d;display:inline-block;animation:blink 1s infinite}
+  body.rec #recBadge{display:flex}
+  @keyframes blink{50%{opacity:.25}}
+  #vu{position:absolute;left:10px;right:10px;bottom:10px;height:5px;background:rgba(246,241,236,.2);border-radius:3px;overflow:hidden}
+  #vu b{display:block;height:100%;width:0;background:var(--lin);transition:width .08s}
+  #noCam{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:14px;font-size:14px;color:var(--lin)}
+
+  /* Barre de commande */
+  #bar{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;
+       background:rgba(19,41,75,.92);border:1px solid rgba(220,207,191,.25);border-radius:999px;padding:8px 10px;z-index:10}
+  #bar .btn{padding:9px 16px}
+  #btnRec{background:var(--rose);color:var(--nuit);border-color:var(--rose);font-weight:500;min-width:170px}
+  body.rec #btnRec{background:#e5484d;border-color:#e5484d;color:#fff}
+  #timer{font-variant-numeric:tabular-nums;min-width:52px;text-align:center;font-size:15px;color:var(--lin)}
+  #speedBox{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--lin);padding:0 6px}
+  #speedBox b{color:var(--coquille);font-weight:500;min-width:30px;text-align:center}
+  .mini{width:30px;height:30px;padding:0;border-radius:50%;font-size:16px;line-height:1}
+
+  /* Compte à rebours */
+  #count{position:absolute;inset:0;display:none;place-items:center;font-size:180px;font-weight:300;color:var(--coquille);background:rgba(13,29,54,.4);z-index:15}
+  #endHint{position:absolute;left:50%;transform:translateX(-50%);top:66%;font-size:15px;color:var(--rose);display:none}
+
+  /* Panneaux */
+  .panel{position:fixed;top:56px;right:0;bottom:0;width:min(420px,100%);background:var(--nuit);border-left:1px solid rgba(220,207,191,.2);
+         padding:20px;overflow:auto;z-index:30;transform:translateX(105%);transition:transform .25s}
+  .panel.open{transform:none}
+  .panel h2{font-weight:500;font-size:19px;margin:0 0 4px;letter-spacing:.02em}
+  .panel h3{font-weight:500;font-size:15px;margin:22px 0 8px;color:var(--lin)}
+  .panel p,.panel li{font-size:14px;line-height:1.55;color:var(--coquille)}
+  .panel label{display:block;font-size:13px;color:var(--lin);margin:14px 0 6px}
+  .panel select,.panel input[type=range]{width:100%}
+  .panel input[type=range]{accent-color:var(--rose)}
+  .panel select{background:var(--nuit2);color:var(--coquille);border:1px solid rgba(220,207,191,.35);border-radius:8px;padding:8px}
+  .row{display:flex;align-items:center;gap:10px;font-size:14px;margin:10px 0}
+  .row input{accent-color:var(--rose);width:18px;height:18px}
+  .close{float:right}
+  kbd{font-family:var(--font);background:var(--nuit2);border:1px solid rgba(220,207,191,.35);border-radius:5px;padding:1px 6px;font-size:12px}
+
+  /* Fenêtres */
+  .modal{position:fixed;inset:0;background:rgba(8,18,34,.78);display:none;place-items:center;z-index:40;padding:20px}
+  .modal.open{display:grid}
+  .card{background:var(--coquille);color:var(--nuit);border-radius:16px;padding:24px;width:min(760px,100%);max-height:92vh;overflow:auto}
+  .card h2{margin:0 0 6px;font-weight:500;font-size:21px}
+  .card p{margin:6px 0;font-size:14px;line-height:1.55}
+  .card textarea{width:100%;height:290px;border:1px solid var(--lin);border-radius:10px;padding:12px;font-size:14px;line-height:1.5;color:var(--nuit);background:#fff;resize:vertical}
+  .card .btn{color:var(--nuit);border-color:var(--nuit)}
+  .card .btn.plein{background:var(--nuit);color:var(--coquille)}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
+  .msg{font-size:13px;color:var(--rose-fort);min-height:18px;margin-top:8px}
+  #takeVideo{width:100%;max-height:52vh;background:#000;border-radius:10px}
+  .takes{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  .takes button{border:1px solid var(--nuit);background:transparent;border-radius:999px;padding:5px 12px;font-size:13px;color:var(--nuit)}
+  .takes button.on{background:var(--nuit);color:var(--coquille)}
+  .fname{font-weight:500;background:var(--lin);padding:2px 8px;border-radius:6px;word-break:break-all}
+  .card .btn.valid{background:#2f6b4f;border-color:#2f6b4f;color:#fff;font-weight:500}
+  .card .btn.valid:disabled{background:#c9c2b8;border-color:#c9c2b8;color:#fff;cursor:not-allowed}
+  .card .btn.lien{border:none;text-decoration:underline;padding:4px 6px;font-size:13px}
+  .actions.sec{font-size:13px;margin-top:18px;padding-top:12px;border-top:1px solid var(--lin);justify-content:space-between}
+  .hint{font-size:13px;color:var(--rose-fort)}
+  .card .msg.ok{color:#2f6b4f;font-size:14px;font-weight:400}
+  .list{margin:10px 0 0;padding:0;list-style:none}
+  .list li{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--lin);font-size:14px}
+  .list li span{flex:1}
+  .list li small{color:var(--rose-fort)}
+
+  /* Écran d'accueil */
+  #welcome{position:fixed;inset:0;background:var(--nuit);z-index:50;display:grid;place-items:center;padding:24px;text-align:center}
+  #welcome .in{max-width:560px}
+  #welcome .mono{width:74px;height:74px;border-radius:50%;border:1px solid var(--lin);display:grid;place-items:center;margin:0 auto 18px;font-size:26px;font-weight:500;letter-spacing:.04em}
+  #welcome h1{font-weight:500;font-size:30px;margin:0 0 10px;letter-spacing:.02em}
+  #welcome p{color:var(--lin);line-height:1.6;font-size:16px}
+  #welcome .btn{font-size:16px;padding:12px 22px;margin-top:14px}
+  #welcome .err{color:var(--rose);font-size:14px;margin-top:14px;min-height:20px}
+
+  @media (max-width:820px){
+    #top{overflow-x:auto;gap:8px;padding:0 10px}
+    #top .btn{padding:6px 10px;font-size:12px}
+    #brand span:not(.mono){display:none}
+    #top select{max-width:46vw;font-size:13px}
+    #prompter{width:92%}
+    #readLine{width:96%}
+    #preview{height:30vh;right:10px;bottom:84px}
+    #scriptInfo{display:none}
+    #bar{width:calc(100% - 16px);justify-content:center;flex-wrap:wrap;border-radius:18px}
+    #btnRec{min-width:0}
+  }
+</style>
+</head>
+<body class="selfie">
+
+<div id="welcome">
+  <div class="in">
+    <div class="mono">VD</div>
+    <h1>Ton téléprompteur</h1>
+    <p>Le texte défile en haut de l'écran, juste sous la caméra : tu lis en regardant l'objectif, et la prise s'enregistre en même temps, prête à déposer dans ton monteur.</p>
+    <button class="btn plein" id="btnStart">Activer la caméra et le micro</button>
+    <div><button class="btn" id="btnNoCam" style="margin-top:10px">Continuer sans caméra (lecture seule)</button></div>
+    <div class="err" id="welcomeErr"></div>
+  </div>
+</div>
+
+<header id="top">
+  <div id="brand"><span class="mono">VD</span><span>TÉLÉPROMPTEUR</span></div>
+  <select id="scriptSel" title="Choisir le script"></select>
+  <span id="scriptInfo"></span>
+  <span class="spacer"></span>
+  <button class="btn rose" id="btnImport">+ Coller mes scripts</button>
+  <button class="btn" id="btnScripts">Mes scripts</button>
+  <button class="btn" id="btnSettings">Réglages</button>
+  <button class="btn" id="btnHelp">Aide</button>
+</header>
+
+<main id="stage">
+  <video id="bgVideo" muted playsinline autoplay></video>
+  <div id="bgDim"></div>
+
+  <div id="prompter"><div id="textWrap"><div id="text"></div></div></div>
+  <div id="readLine"></div>
+  <div id="endHint">Fin du texte. Appuie sur « Arrêter » quand tu as fini de parler.</div>
+
+  <div id="preview">
+    <video id="camVideo" muted playsinline autoplay></video>
+    <div id="noCam">Caméra non activée</div>
+    <div id="recBadge"><i></i><span id="recTime">00:00</span></div>
+    <div id="vu"><b id="vuBar"></b></div>
+  </div>
+
+  <div id="count"></div>
+
+  <div id="bar">
+    <button class="btn" id="btnRestart" title="Recommencer la prise depuis le début (touche 0)">↺ Recommencer</button>
+    <button class="btn" id="btnPlay" title="Lancer ou mettre en pause le défilement (barre espace)">▶ Défiler</button>
+    <button class="btn" id="btnRec" title="Compte à rebours puis enregistrement (touche R)">● Tourner la prise</button>
+    <span id="timer">00:00</span>
+    <span id="speedBox">Vitesse
+      <button class="btn mini" id="slower" title="Plus lent (flèche bas)">−</button>
+      <b id="wpmVal">150</b>
+      <button class="btn mini" id="faster" title="Plus rapide (flèche haut)">+</button>
+      mots/min
+    </span>
+  </div>
+</main>
+
+<!-- Réglages -->
+<aside class="panel" id="settings">
+  <button class="btn close" data-close="settings">Fermer</button>
+  <h2>Réglages</h2>
+
+  <h3>Caméra et micro</h3>
+  <label for="camSel">Caméra (ton iPhone apparaît ici avec Caméra de continuité)</label>
+  <select id="camSel"></select>
+  <label for="micSel">Micro</label>
+  <select id="micSel"></select>
+  <label for="fmtSel">Format de la prise</label>
+  <select id="fmtSel">
+    <option value="vertical">Vertical 9:16 pour les Reels (recadré au centre)</option>
+    <option value="original">Format d'origine de la caméra</option>
+  </select>
+  <div class="row"><input type="checkbox" id="optSelfie" checked><span>Aperçu en miroir (comme un selfie, la vidéo enregistrée reste à l'endroit)</span></div>
+  <div class="row"><input type="checkbox" id="optCamFond"><span>Caméra en fond, derrière le texte</span></div>
+
+  <h3>Texte</h3>
+  <label for="fsRange">Taille du texte : <b id="fsVal"></b></label>
+  <input type="range" id="fsRange" min="28" max="110" step="2">
+  <label for="colRange">Largeur de la colonne : <b id="colVal"></b></label>
+  <input type="range" id="colRange" min="30" max="95" step="1">
+  <label for="rlRange">Hauteur de la ligne de lecture : <b id="rlVal"></b></label>
+  <input type="range" id="rlRange" min="6" max="50" step="1">
+  <label for="alignSel">Alignement</label>
+  <select id="alignSel"><option value="center">Centré</option><option value="left">À gauche</option></select>
+  <div class="row"><input type="checkbox" id="optIndic" checked><span>Afficher les indications de jeu (en petit, en vieux rose)</span></div>
+  <div class="row"><input type="checkbox" id="optMiroir"><span>Texte inversé (pour une vitre de téléprompteur)</span></div>
+  <div class="row"><input type="checkbox" id="optCount" checked><span>Compte à rebours de 3 secondes avant la prise</span></div>
+</aside>
+
+<!-- Aide -->
+<aside class="panel" id="help">
+  <button class="btn close" data-close="help">Fermer</button>
+  <h2>Mode d'emploi</h2>
+  <h3>Chaque semaine</h3>
+  <ol>
+    <li>Le vendredi, ta tâche « Veille & contenu » prépare les 2 scripts de la semaine, puis ton Mac les recopie dans ton dossier iCloud Drive « Téléprompteur VD », à côté de ce fichier. À l'ouverture, le téléprompteur les charge tout seul et sélectionne le prochain Reel à tourner.</li>
+    <li>Si un script manque, tu peux toujours le coller avec <b>+ Coller mes scripts</b>.</li>
+    <li>Vérifie le Reel choisi en haut, place-toi face à une fenêtre, cadre-toi dans l'aperçu.</li>
+    <li>Clique sur <b>Tourner la prise</b> : 3, 2, 1, l'enregistrement démarre et le texte défile. Lis la ligne marquée par les petits triangles.</li>
+    <li>Une erreur ? <b>↺ Recommencer</b> : la prise repart de zéro (ton monteur ne coupe pas les phrases ratées).</li>
+    <li>À la fin, <b>Arrêter</b>, puis <b>▶ Lire ma prise</b>. Si elle te plaît, <b>✓ Valider ce Reel</b> : la prise part dans Documents &gt; Monteur-VD &gt; A_MONTER et le monteur la monte tout seul. Une notification te prévient quand ton Reel est prêt dans LIVRES.</li>
+  </ol>
+  <h3>Filmer avec ton iPhone</h3>
+  <p>Avec la Caméra de continuité d'Apple, ton iPhone devient la caméra de ton Mac : fixe-le en haut de l'écran, à la verticale, verrouillé, puis choisis-le dans Réglages &gt; Caméra. Tu gardes la qualité de l'iPhone et le texte défile juste en dessous de son objectif.</p>
+  <h3>Raccourcis clavier</h3>
+  <p><kbd>R</kbd> tourner ou arrêter la prise<br>
+  <kbd>Espace</kbd> pause ou reprise du défilement<br>
+  <kbd>↑</kbd> <kbd>↓</kbd> plus vite, plus lent<br>
+  <kbd>+</kbd> <kbd>−</kbd> taille du texte<br>
+  <kbd>0</kbd> recommencer depuis le début<br>
+  <kbd>F</kbd> plein écran<br>
+  Molette ou pavé tactile : avancer ou reculer le texte à la main.</p>
+  <p>Une télécommande Bluetooth de présentation fonctionne aussi : la touche « suivant » met en pause ou relance le défilement.</p>
+</aside>
+
+<!-- Coller des scripts -->
+<div class="modal" id="importModal">
+  <div class="card">
+    <h2>Coller mes scripts</h2>
+    <p>Colle ici le bloc <b>TÉLÉPROMPTEUR</b> fourni par ta tâche « Veille & contenu ». Il peut contenir plusieurs Reels : ils seront tous ajoutés.</p>
+    <p>Tu peux aussi coller un simple texte : il deviendra un script à part entière.</p>
+    <textarea id="importText" placeholder="=== REEL | 2026-11-23-reel-ig1 | Brigade des solopreneures · n°01 | à tourner avant le lundi 23/11 ===&#10;Ton texte à dire...&#10;(sourire)&#10;=== FIN ==="></textarea>
+    <div class="msg" id="importMsg"></div>
+    <div class="actions">
+      <button class="btn plein" id="importOk">Ajouter</button>
+      <button class="btn" data-closemodal="importModal">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mes scripts -->
+<div class="modal" id="scriptsModal">
+  <div class="card">
+    <h2>Mes scripts</h2>
+    <p>Choisis un script pour le modifier ou le supprimer. Ils restent enregistrés dans ce navigateur, sur cet ordinateur.</p>
+    <ul class="list" id="scriptList"></ul>
+    <div id="editBox" style="display:none">
+      <label style="display:block;font-size:13px;margin:16px 0 6px">Nom du fichier de la prise (sans extension)</label>
+      <input id="editId" style="width:100%;padding:8px;border:1px solid var(--lin);border-radius:8px;font-size:14px">
+      <label style="display:block;font-size:13px;margin:12px 0 6px">Titre</label>
+      <input id="editTitle" style="width:100%;padding:8px;border:1px solid var(--lin);border-radius:8px;font-size:14px">
+      <label style="display:block;font-size:13px;margin:12px 0 6px">Texte (une indication de jeu entre parenthèses sur sa propre ligne)</label>
+      <textarea id="editText" style="height:220px"></textarea>
+      <div class="actions"><button class="btn plein" id="editSave">Enregistrer</button><button class="btn" id="editCancel">Annuler</button></div>
+    </div>
+    <div class="actions"><button class="btn" data-closemodal="scriptsModal">Fermer</button></div>
+  </div>
+</div>
+
+<!-- Revoir la prise -->
+<div class="modal" id="takeModal">
+  <div class="card">
+    <h2>Ta prise</h2>
+    <div class="takes" id="takeList"></div>
+    <video id="takeVideo" controls playsinline></video>
+    <div class="actions">
+      <button class="btn plein" id="takePlay">▶ Lire ma prise</button>
+      <button class="btn valid" id="takeOk" disabled>✓ Valider ce Reel</button>
+      <button class="btn" id="takeAgain">↺ Refaire une prise</button>
+    </div>
+    <p id="takeHint" class="hint"></p>
+    <div class="msg" id="takeMsg"></div>
+    <div class="actions sec">
+      <span>Nom du fichier : <span class="fname" id="takeName"></span></span>
+      <button class="btn lien" id="takeDl">Enregistrer sans monter</button>
+      <button class="btn lien" data-closemodal="takeModal">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k, d){ try { const v = localStorage.getItem("vdtp_" + k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
+    set(k, v){ try { localStorage.setItem("vdtp_" + k, JSON.stringify(v)); } catch(e){} }
+  };
+
+  /* ---------- Réglages ---------- */
+  const S = Object.assign({ fs:54, col:62, rl:18, align:"center", wpm:150, indic:true, miroir:false, count:true,
+                            selfie:true, camfond:false, fmt:"vertical", cam:"", mic:"", current:"" }, store.get("settings", {}));
+  const save = () => store.set("settings", S);
+
+  function applyLook(){
+    const r = document.documentElement.style;
+    r.setProperty("--fs", S.fs + "px"); r.setProperty("--col", S.col + "%"); r.setProperty("--rl", S.rl + "%"); r.setProperty("--align", S.align);
+    document.body.classList.toggle("miroir", S.miroir);
+    document.body.classList.toggle("selfie", S.selfie);
+    document.body.classList.toggle("camfond", S.camfond);
+    $("fsVal").textContent = S.fs + " px"; $("colVal").textContent = S.col + " %"; $("rlVal").textContent = S.rl + " %";
+    $("fsRange").value = S.fs; $("colRange").value = S.col; $("rlRange").value = S.rl; $("alignSel").value = S.align;
+    $("optIndic").checked = S.indic; $("optMiroir").checked = S.miroir; $("optCount").checked = S.count;
+    $("optSelfie").checked = S.selfie; $("optCamFond").checked = S.camfond; $("fmtSel").value = S.fmt;
+    $("wpmVal").textContent = S.wpm;
+    document.querySelectorAll("#text .indic").forEach(el => el.style.display = S.indic ? "" : "none");
+  }
+
+  /* ---------- Scripts ---------- */
+  const DEMO = { id:"essai-teleprompteur", title:"Essai du téléprompteur", note:"Pour tester avant ton premier Reel",
+    text:"Bonjour, je teste mon téléprompteur.\n(regard dans l'objectif)\nLe texte monte tout seul, à mon rythme.\nSi ça va trop vite, je baisse la vitesse avec la flèche du bas.\nSi c'est trop lent, flèche du haut.\nJe garde les yeux sur la ligne marquée par les petits triangles, juste sous la caméra.\n(sourire)\nEt si je me trompe, je recommence la prise depuis le début.\nC'est tout pour cet essai." };
+  let scripts = store.get("scripts", null);
+  if (!Array.isArray(scripts) || !scripts.length) scripts = [DEMO];
+  const saveScripts = () => store.set("scripts", scripts);
+
+  function parseBlocks(raw){
+    const out = [];
+    const txt = raw.replace(/\r\n?/g, "\n").replace(/[‘’]/g, "'");
+    const re = /={2,}\s*REEL\s*\|([^\n]*?)={2,}\s*\n([\s\S]*?)\n?\s*={2,}\s*FIN\s*={2,}/gi;
+    let m;
+    while ((m = re.exec(txt))){
+      const parts = m[1].split("|").map(s => s.trim());
+      out.push({ id: cleanId(parts[0] || ""), title: parts[1] || parts[0] || "Reel", note: parts.slice(2).join(" · "), text: cleanText(m[2]) });
+    }
+    return out;
+  }
+  function cleanId(s){
+    s = s.replace(/\.(mov|mp4|webm|m4v)$/i, "").trim();
+    return s.replace(/[\/\\:*?"<>|]/g, "-").replace(/\s+/g, "-") || stampId();
+  }
+  function stampId(){
+    const d = new Date(), p = (n) => String(n).padStart(2, "0");
+    return `prise-${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+  }
+  function cleanText(t){
+    return t.split("\n").map(l => l.replace(/^\s*(>|[-•]\s)/, "").replace(/\*\*/g, "").trimEnd())
+            .join("\n").replace(/^```[a-z]*\n?|```$/gm, "").replace(/\n{3,}/g, "\n\n").trim();
+  }
+  function wordsOf(text){
+    return text.split("\n").filter(l => !isIndic(l)).join(" ")
+               .replace(/\*[^*]+\*/g, "").split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
+  }
+  function isIndic(line){ const l = line.trim(); return /^\(.*\)$/.test(l) || /^\*[^*]+\*$/.test(l) || /^_[^_]+_$/.test(l); }
+  const esc = (s) => s.replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+
+  function current(){ return scripts.find(s => s.id === S.current) || scripts[0]; }
+
+  function renderSelect(){
+    const sel = $("scriptSel"); sel.innerHTML = "";
+    scripts.forEach(s => { const o = document.createElement("option"); o.value = s.id; o.textContent = s.title + (s.id !== s.title ? "  (" + s.id + ")" : ""); sel.appendChild(o); });
+    const c = current(); if (c) { S.current = c.id; sel.value = c.id; }
+  }
+  function renderText(){
+    const c = current(); const box = $("text");
+    if (!c){ box.innerHTML = "<p>Aucun script. Clique sur « + Coller mes scripts ».</p>"; return; }
+    const html = c.text.split(/\n/).map(line => {
+      if (!line.trim()) return "";
+      if (isIndic(line)) return `<span class="indic">${esc(line.trim().replace(/^[*_]|[*_]$/g, ""))}</span>`;
+      return `<p>${esc(line).replace(/\*([^*]+)\*/g, '<span class="indic" style="display:inline;font-size:.6em">($1)</span>')}</p>`;
+    }).join("");
+    box.innerHTML = html;
+    const n = wordsOf(c.text);
+    $("scriptInfo").textContent = `${n} mots · environ ${Math.round(n / S.wpm * 60)} s à ${S.wpm} mots/min` + (c.note ? " · " + c.note : "");
+    applyLook();
+    resetScroll();
+  }
+
+  /* ---------- Défilement ---------- */
+  let pos = 0, playing = false, last = 0, ended = false;
+  function startOffset(){ return $("prompter").clientHeight * S.rl / 100; }
+  function contentHeight(){
+    const t = $("text"); const lastEl = t.lastElementChild;
+    return lastEl ? lastEl.offsetTop + lastEl.offsetHeight : 0;
+  }
+  function draw(){ $("textWrap").style.transform = `translateY(${startOffset() - pos}px)`; }
+  function resetScroll(){ pos = 0; ended = false; $("endHint").style.display = "none"; draw(); }
+  function speedPx(){
+    // vitesse en pixels par seconde, calculée pour lire le texte au rythme choisi (mots par minute)
+    const c = current(); const n = Math.max(1, wordsOf(c ? c.text : ""));
+    const duree = n / S.wpm * 60;
+    return contentHeight() / duree;
+  }
+  function tick(t){
+    if (playing){
+      const dt = last ? (t - last) / 1000 : 0;
+      pos += speedPx() * Math.min(dt, 0.1);
+      const end = contentHeight();
+      if (pos >= end){ pos = end; if (!ended){ ended = true; $("endHint").style.display = rec ? "block" : "none"; } setPlaying(false); }
+      draw();
+    }
+    last = t;
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+  function setPlaying(v){ playing = v; $("btnPlay").textContent = v ? "❚❚ Pause" : "▶ Défiler"; }
+  $("btnPlay").onclick = () => { if (pos >= contentHeight()) resetScroll(); setPlaying(!playing); };
+  $("prompter").addEventListener("wheel", (e) => { e.preventDefault(); pos = Math.max(0, Math.min(contentHeight(), pos + e.deltaY)); draw(); }, { passive:false });
+  window.addEventListener("resize", draw);
+
+  function setWpm(v){ S.wpm = Math.max(60, Math.min(260, v)); save(); $("wpmVal").textContent = S.wpm; const c = current(); if (c){ const n = wordsOf(c.text); $("scriptInfo").textContent = `${n} mots · environ ${Math.round(n / S.wpm * 60)} s à ${S.wpm} mots/min` + (c.note ? " · " + c.note : ""); } }
+  $("faster").onclick = () => setWpm(S.wpm + 10);
+  $("slower").onclick = () => setWpm(S.wpm - 10);
+
+  /* ---------- Caméra et micro ---------- */
+  let stream = null, audioCtx = null, analyser = null, camOk = false;
+  async function openMedia(){
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("nosupport");
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    const v = { width:{ ideal:1920 }, height:{ ideal:1080 }, frameRate:{ ideal:30 } };
+    if (S.cam) v.deviceId = { exact:S.cam };
+    const a = { echoCancellation:false, noiseSuppression:false, autoGainControl:false };
+    if (S.mic) a.deviceId = { exact:S.mic };
+    try { stream = await navigator.mediaDevices.getUserMedia({ video:v, audio:a }); }
+    catch(e){
+      if (S.cam || S.mic){ S.cam = ""; S.mic = ""; save(); stream = await navigator.mediaDevices.getUserMedia({ video:{ width:{ideal:1920}, height:{ideal:1080} }, audio:a }); }
+      else throw e;
+    }
+    $("camVideo").srcObject = stream; $("bgVideo").srcObject = stream;
+    $("noCam").style.display = "none"; camOk = true;
+    $("camVideo").onloadedmetadata = () => { const vt = $("camVideo"); $("preview").classList.toggle("paysage", S.fmt === "original" && vt.videoWidth > vt.videoHeight); };
+    await listDevices();
+    setupMeter();
+  }
+  async function listDevices(){
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    const cur = stream ? stream.getVideoTracks()[0] : null, curA = stream ? stream.getAudioTracks()[0] : null;
+    const fill = (sel, kind, track) => {
+      sel.innerHTML = "";
+      devs.filter(d => d.kind === kind).forEach((d, i) => {
+        const o = document.createElement("option"); o.value = d.deviceId;
+        o.textContent = d.label || (kind === "videoinput" ? "Caméra " : "Micro ") + (i + 1);
+        sel.appendChild(o);
+      });
+      const id = track && track.getSettings ? track.getSettings().deviceId : "";
+      if (id) sel.value = id;
+    };
+    fill($("camSel"), "videoinput", cur); fill($("micSel"), "audioinput", curA);
+  }
+  function setupMeter(){
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      const src = audioCtx.createMediaStreamSource(stream);
+      analyser = audioCtx.createAnalyser(); analyser.fftSize = 512; src.connect(analyser);
+      const buf = new Uint8Array(analyser.fftSize);
+      const loop = () => {
+        if (!analyser) return;
+        analyser.getByteTimeDomainData(buf);
+        let peak = 0; for (let i = 0; i < buf.length; i++) peak = Math.max(peak, Math.abs(buf[i] - 128));
+        $("vuBar").style.width = Math.min(100, peak / 128 * 160) + "%";
+        requestAnimationFrame(loop);
+      };
+      loop();
+    } catch(e){}
+  }
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener("devicechange", () => { if (camOk) listDevices(); });
+  $("camSel").onchange = async () => { S.cam = $("camSel").value; save(); try { await openMedia(); } catch(e){ alertMsg("Impossible d'ouvrir cette caméra."); } };
+  $("micSel").onchange = async () => { S.mic = $("micSel").value; save(); try { await openMedia(); } catch(e){ alertMsg("Impossible d'ouvrir ce micro."); } };
+
+  function explainError(e){
+    const n = e && (e.name || e.message) || "";
+    if (n === "nosupport" || n === "TypeError") return "Ce navigateur n'autorise pas la caméra quand la page est ouverte depuis un fichier. Ouvre ce fichier avec Firefox (clic droit > Ouvrir avec > Firefox), ou avec Google Chrome.";
+    if (n === "NotAllowedError" || n === "SecurityError") return "L'accès a été refusé. Autorise la caméra et le micro pour cette page (icône à gauche de l'adresse), et vérifie Réglages Système > Confidentialité et sécurité > Caméra et Micro : ton navigateur doit être coché. Puis recharge la page.";
+    if (n === "NotFoundError" || n === "OverconstrainedError") return "Aucune caméra ou aucun micro trouvé. Branche ou déverrouille ton iPhone, puis réessaie.";
+    if (n === "NotReadableError") return "La caméra est déjà utilisée par une autre application (FaceTime, Zoom...). Ferme-la puis réessaie.";
+    return "La caméra n'a pas pu démarrer (" + n + ").";
+  }
+  $("btnStart").onclick = async () => {
+    $("welcomeErr").textContent = "";
+    try { await openMedia(); $("welcome").style.display = "none"; }
+    catch(e){ $("welcomeErr").textContent = explainError(e); }
+  };
+  $("btnNoCam").onclick = () => { $("welcome").style.display = "none"; };
+
+  /* ---------- Enregistrement ---------- */
+  let rec = null, chunks = [], recStart = 0, recTimer = null, canvasLoop = null, takes = [], discard = false;
+  function pickMime(){
+    if (!window.MediaRecorder) return "";
+    const list = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4;codecs=avc1,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+    return list.find(m => MediaRecorder.isTypeSupported(m)) || "";
+  }
+  function extOf(mime){ return /mp4/.test(mime) ? "mp4" : "webm"; }
+
+  function recordingStream(){
+    const vt = $("camVideo"); const w = vt.videoWidth, h = vt.videoHeight;
+    if (S.fmt !== "vertical" || !w || !h || h >= w * 0.9) return stream; // déjà vertical, ou format d'origine
+    const cw = Math.round(h * 9 / 16 / 2) * 2, ch = h;
+    const cv = document.createElement("canvas"); cv.width = cw; cv.height = ch;
+    const ctx = cv.getContext("2d");
+    const sx = Math.round((w - cw) / 2);
+    let live = true;
+    const loop = () => { if (!live) return; ctx.drawImage(vt, sx, 0, cw, ch, 0, 0, cw, ch); requestAnimationFrame(loop); };
+    loop();
+    canvasLoop = () => { live = false; };
+    const out = cv.captureStream(30);
+    stream.getAudioTracks().forEach(t => out.addTrack(t));
+    return out;
+  }
+
+  async function countdown(){
+    if (!S.count) return;
+    const c = $("count"); c.style.display = "grid";
+    for (const n of [3, 2, 1]){ c.textContent = n; await new Promise(r => setTimeout(r, 850)); }
+    c.style.display = "none";
+  }
+
+  let busy = false;
+  async function startTake(){
+    if (busy || rec) return;
+    if (!camOk){ alertMsg("Active d'abord la caméra (recharge la page)."); return; }
+    if (!window.MediaRecorder){ alertMsg("Ce navigateur ne sait pas enregistrer la vidéo. Utilise Safari, Firefox ou Chrome à jour."); return; }
+    busy = true;
+    resetScroll(); setPlaying(false);
+    await countdown();
+    const mime = pickMime();
+    const rs = recordingStream();
+    chunks = []; discard = false;
+    try { rec = mime ? new MediaRecorder(rs, { mimeType:mime, videoBitsPerSecond:8000000 }) : new MediaRecorder(rs); }
+    catch(e){ rec = new MediaRecorder(rs); }
+    const usedMime = rec.mimeType || mime || "video/webm";
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = () => {
+      if (canvasLoop){ canvasLoop(); canvasLoop = null; }
+      const wasDiscard = discard; rec = null; busy = false;
+      document.body.classList.remove("rec"); clearInterval(recTimer); $("btnRec").textContent = "● Tourner la prise"; $("endHint").style.display = "none";
+      if (wasDiscard){ startTake(); return; }
+      const blob = new Blob(chunks, { type:usedMime.split(";")[0] });
+      const c = current();
+      takes.push({ blob, url:URL.createObjectURL(blob), ext:extOf(usedMime), id:(c ? c.id : stampId()), dur:Math.round((Date.now() - recStart) / 1000),
+                   title:(c ? c.title : ""), text:(c ? c.text : ""), commande:(c && c.commande) || "", lue:false, validee:false });
+      showTakes(takes.length - 1);
+    };
+    rec.start(1000);
+    recStart = Date.now();
+    document.body.classList.add("rec"); $("btnRec").textContent = "■ Arrêter";
+    recTimer = setInterval(updTimer, 250); updTimer();
+    setTimeout(() => { if (rec) setPlaying(true); }, 700); // petit temps pour poser le regard avant que le texte monte
+    busy = false;
+  }
+  function updTimer(){
+    const s = Math.floor((Date.now() - recStart) / 1000);
+    const t = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+    $("timer").textContent = t; $("recTime").textContent = t;
+  }
+  function stopTake(){ if (rec && rec.state !== "inactive"){ setPlaying(false); rec.stop(); } }
+  function restartTake(){
+    if (rec && rec.state !== "inactive"){ discard = true; setPlaying(false); rec.stop(); }
+    else { resetScroll(); setPlaying(false); $("timer").textContent = "00:00"; }
+  }
+  $("btnRec").onclick = () => rec ? stopTake() : startTake();
+  $("btnRestart").onclick = restartTake;
+
+  let shown = 0;
+  function showTakes(i){
+    shown = i;
+    const list = $("takeList"); list.innerHTML = "";
+    takes.forEach((t, k) => {
+      const b = document.createElement("button"); b.textContent = `Prise ${k + 1} · ${t.dur} s`; if (k === i) b.className = "on";
+      b.onclick = () => showTakes(k); list.appendChild(b);
+    });
+    const t = takes[i];
+    $("takeVideo").src = t.url;
+    $("takeName").textContent = `${t.id}.${t.ext}`;
+    $("takeMsg").textContent = ""; $("takeMsg").className = "msg";
+    updTakeButtons();
+    openModal("takeModal");
+  }
+  function updTakeButtons(){
+    const t = takes[shown]; if (!t) return;
+    $("takeOk").disabled = !t.lue || t.validee;
+    $("takeOk").textContent = t.validee ? "✓ Reel validé" : "✓ Valider ce Reel";
+    $("takeHint").textContent = t.validee ? "" : (t.lue ? "Elle te plaît ? Valide-la : elle part au monteur, qui la monte tout seul." : "Lis ta prise en entier avant de la valider.");
+  }
+  $("takePlay").onclick = () => { const v = $("takeVideo"); try { v.currentTime = 0; } catch(e){} const p = v.play(); if (p && p.catch) p.catch(() => {}); };
+  $("takeVideo").addEventListener("play", () => { const t = takes[shown]; if (t && !t.lue){ t.lue = true; updTakeButtons(); } });
+
+  function saveBlob(blob, name){
+    const url = (blob instanceof Blob) ? URL.createObjectURL(blob) : blob;
+    const a = document.createElement("a"); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    if (blob instanceof Blob) setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+  function montageText(t){
+    const rush = `A_MONTER/${t.id}.${t.ext}`;
+    const d = new Date();
+    const lignes = [
+      `ID: ${t.id}`,
+      `RUSH: ${t.id}.${t.ext}`,
+      `VALIDE_LE: ${d.toLocaleDateString("fr-FR")} ${d.toLocaleTimeString("fr-FR")}`,
+      "",
+      "MONTAGE AUTOMATIQUE demandé par Valérie depuis son téléprompteur, après avoir revu et validé sa prise.",
+      "Valérie n'est pas devant l'écran : ne pose aucune question et ne t'arrête pas en attendant une réponse. Fais toi-même les choix nécessaires en suivant CLAUDE.md, GUIDE_STYLE.md et le skill monter-video, puis va jusqu'au bout : montage, relecture (transcription corrigée, planche de contrôle), livraison dans LIVRES (vidéo, couverture, légende).",
+      `Le rush est ${rush}.`,
+      ""
+    ];
+    if (t.commande){
+      let cmd = t.commande.replace(/A_MONTER\/[^\s]+?\.(mov|mp4|webm|m4v)\b/gi, rush);
+      if (cmd.indexOf(rush) < 0) lignes.push(`Attention : le fichier à monter est ${rush} (et non celui cité ci-dessous).`);
+      lignes.push("Applique cette commande (skill monter-video) :", cmd);
+    } else {
+      lignes.push(`Utilise le skill monter-video pour monter ${rush} pour Instagram.`);
+      if (t.title) lignes.push(`Rubrique et titre du Reel : ${t.title}.`);
+      if (t.text){ lignes.push("Texte prononcé par Valérie (son script) :", t.text); }
+    }
+    return lignes.join("\n") + "\n";
+  }
+  $("takeOk").onclick = () => {
+    const t = takes[shown]; if (!t || !t.lue || t.validee) return;
+    saveBlob(t.blob, `${t.id}.${t.ext}`);
+    setTimeout(() => saveBlob(new Blob([montageText(t)], { type:"text/plain;charset=utf-8" }), `${t.id}.montage.txt`), 1500);
+    t.validee = true; updTakeButtons();
+    try { const ok = store.get("valides", {}); ok[t.id] = new Date().toISOString(); store.set("valides", ok); } catch(e){}
+    $("takeMsg").className = "msg ok";
+    $("takeMsg").innerHTML = "Ta prise est partie au monteur. Il la monte tout seul : tu recevras une notification sur ton Mac, et ton Reel t'attendra dans <b>Documents &gt; Monteur-VD &gt; LIVRES</b>.";
+  };
+  $("takeDl").onclick = () => {
+    const t = takes[shown]; if (!t) return;
+    saveBlob(t.blob, `${t.id}.${t.ext}`);
+    $("takeMsg").className = "msg"; $("takeMsg").textContent = "Prise enregistrée, sans montage automatique.";
+  };
+  $("takeAgain").onclick = () => { closeModal("takeModal"); startTake(); };
+
+  /* ---------- Import et gestion des scripts ---------- */
+  $("btnImport").onclick = () => { $("importText").value = ""; $("importMsg").textContent = ""; openModal("importModal"); setTimeout(() => $("importText").focus(), 50); };
+  $("importOk").onclick = () => {
+    const raw = $("importText").value;
+    if (!raw.trim()){ $("importMsg").textContent = "Colle d'abord ton bloc de scripts."; return; }
+    let found = parseBlocks(raw);
+    if (!found.length){
+      const d = new Date();
+      found = [{ id:stampId(), title:"Script collé le " + d.toLocaleDateString("fr-FR"), note:"", text:cleanText(raw) }];
+    }
+    found.slice().reverse().forEach(f => {
+      const k = scripts.findIndex(s => s.id === f.id);
+      if (k >= 0) scripts[k] = f; else scripts.unshift(f);
+    });
+    scripts = scripts.filter(s => s.id !== DEMO.id || scripts.length === 1);
+    saveScripts();
+    S.current = found[0].id; save();
+    renderSelect(); renderText();
+    closeModal("importModal");
+    toast(found.length === 1 ? "1 script ajouté" : found.length + " scripts ajoutés");
+  };
+  $("scriptSel").onchange = () => { S.current = $("scriptSel").value; save(); renderText(); };
+
+  let editing = null;
+  function renderList(){
+    const ul = $("scriptList"); ul.innerHTML = "";
+    scripts.forEach(s => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>${esc(s.title)}<br><small>${esc(s.id)} · ${wordsOf(s.text)} mots${(store.get("valides", {})[s.id]) ? " · validé ✓" : ""}${s.source === "tache" ? " · de ta tâche" + (s.edited ? " (modifié par toi)" : "") : ""}</small></span>`;
+      const e = document.createElement("button"); e.className = "btn"; e.textContent = "Modifier"; e.onclick = () => edit(s.id);
+      const d = document.createElement("button"); d.className = "btn"; d.textContent = "Supprimer";
+      d.onclick = () => { if (d.dataset.sure){ scripts = scripts.filter(x => x.id !== s.id); if (!scripts.length) scripts = [DEMO]; saveScripts(); renderList(); renderSelect(); renderText(); } else { d.dataset.sure = 1; d.textContent = "Confirmer ?"; } };
+      li.append(e, d); ul.appendChild(li);
+    });
+  }
+  function edit(id){
+    const s = scripts.find(x => x.id === id); if (!s) return; editing = id;
+    $("editId").value = s.id; $("editTitle").value = s.title; $("editText").value = s.text; $("editBox").style.display = "block";
+  }
+  $("editSave").onclick = () => {
+    const s = scripts.find(x => x.id === editing); if (!s) return;
+    s.id = cleanId($("editId").value); s.title = $("editTitle").value.trim() || s.id; s.text = cleanText($("editText").value); s.edited = true;
+    S.current = s.id; save(); saveScripts(); $("editBox").style.display = "none"; renderList(); renderSelect(); renderText();
+  };
+  $("editCancel").onclick = () => { $("editBox").style.display = "none"; };
+  $("btnScripts").onclick = () => { $("editBox").style.display = "none"; renderList(); openModal("scriptsModal"); };
+
+  /* ---------- Panneaux et fenêtres ---------- */
+  function togglePanel(id){ ["settings", "help"].forEach(p => $(p).classList.toggle("open", p === id && !$(p).classList.contains("open"))); }
+  $("btnSettings").onclick = () => togglePanel("settings");
+  $("btnHelp").onclick = () => togglePanel("help");
+  document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => $(b.dataset.close).classList.remove("open"));
+  function openModal(id){ $(id).classList.add("open"); }
+  function closeModal(id){ $(id).classList.remove("open"); if (id === "takeModal") $("takeVideo").pause(); }
+  document.querySelectorAll("[data-closemodal]").forEach(b => b.onclick = () => closeModal(b.dataset.closemodal));
+  let toastEl;
+  function toast(t){
+    if (!toastEl){ toastEl = document.createElement("div"); toastEl.style.cssText = "position:fixed;top:70px;left:50%;transform:translateX(-50%);background:var(--coquille);color:var(--nuit);padding:10px 18px;border-radius:999px;font-size:14px;z-index:60;transition:opacity .3s"; document.body.appendChild(toastEl); }
+    toastEl.textContent = t; toastEl.style.opacity = 1; clearTimeout(toastEl._t); toastEl._t = setTimeout(() => toastEl.style.opacity = 0, 2600);
+  }
+  const alertMsg = toast;
+
+  $("fsRange").oninput = (e) => { S.fs = +e.target.value; save(); applyLook(); draw(); };
+  $("colRange").oninput = (e) => { S.col = +e.target.value; save(); applyLook(); draw(); };
+  $("rlRange").oninput = (e) => { S.rl = +e.target.value; save(); applyLook(); draw(); };
+  $("alignSel").onchange = (e) => { S.align = e.target.value; save(); applyLook(); };
+  $("optIndic").onchange = (e) => { S.indic = e.target.checked; save(); applyLook(); };
+  $("optMiroir").onchange = (e) => { S.miroir = e.target.checked; save(); applyLook(); };
+  $("optCount").onchange = (e) => { S.count = e.target.checked; save(); };
+  $("optSelfie").onchange = (e) => { S.selfie = e.target.checked; save(); applyLook(); };
+  $("optCamFond").onchange = (e) => { S.camfond = e.target.checked; save(); applyLook(); };
+  $("fmtSel").onchange = (e) => { S.fmt = e.target.value; save(); const vt = $("camVideo"); $("preview").classList.toggle("paysage", S.fmt === "original" && vt.videoWidth > vt.videoHeight); };
+
+  /* ---------- Clavier ---------- */
+  document.addEventListener("keydown", (e) => {
+    const tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "textarea" || tag === "input" || tag === "select") return;
+    if (document.querySelector(".modal.open")) { if (e.key === "Escape") document.querySelectorAll(".modal.open").forEach(m => closeModal(m.id)); return; }
+    const k = e.key;
+    if (k === " " || k === "PageDown" || k === "ArrowRight"){ e.preventDefault(); $("btnPlay").click(); }
+    else if (k === "ArrowUp"){ e.preventDefault(); setWpm(S.wpm + 10); }
+    else if (k === "ArrowDown"){ e.preventDefault(); setWpm(S.wpm - 10); }
+    else if (k === "+" || k === "="){ S.fs = Math.min(110, S.fs + 4); save(); applyLook(); draw(); }
+    else if (k === "-" || k === "_"){ S.fs = Math.max(28, S.fs - 4); save(); applyLook(); draw(); }
+    else if (k === "r" || k === "R"){ $("btnRec").click(); }
+    else if (k === "0" || k === "PageUp" || k === "ArrowLeft"){ e.preventDefault(); restartTake(); }
+    else if (k === "Escape"){ if (rec) stopTake(); }
+    else if (k === "f" || k === "F"){ try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); } catch(err){} }
+  });
+
+  /* ---------- Scripts déposés par la tâche « Veille & contenu » ---------- */
+  // La tâche dépose chaque semaine, dans le même dossier que ce fichier, un fichier
+  // « scripts-reels-AAAA-MM-JJ.js » (date du lundi de publication). On essaie de charger
+  // ceux des 6 dernières semaines et des 2 prochaines.
+  const isoDay = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  function weekFiles(){
+    const t = new Date(); t.setHours(12, 0, 0, 0);
+    const base = new Date(t); base.setDate(t.getDate() - ((t.getDay() + 6) % 7));
+    const out = [];
+    for (let k = -6; k <= 2; k++){ const d = new Date(base); d.setDate(base.getDate() + 7 * k); out.push("scripts-reels-" + isoDay(d) + ".js"); }
+    return out;
+  }
+  function loadTaskScripts(){
+    window.VD_SCRIPTS = window.VD_SCRIPTS || [];
+    return Promise.all(weekFiles().map(name => new Promise(res => {
+      const el = document.createElement("script"); el.src = name;
+      el.onload = () => res(true); el.onerror = () => { el.remove(); res(false); };
+      document.head.appendChild(el);
+    })));
+  }
+  function mergeTaskScripts(){
+    const entries = (window.VD_SCRIPTS || []).slice().sort((a, b) => String(a.semaine).localeCompare(String(b.semaine)));
+    let added = 0, updated = 0;
+    entries.forEach(e => {
+      const found = parseBlocks(String(e.bloc || ""));
+      const cmds = (e.commandes && typeof e.commandes === "object") ? e.commandes : {};
+      found.forEach(f => {
+        f.source = "tache"; f.semaine = e.semaine || ""; f.genere = e.genere || ""; f.commande = String(cmds[f.id] || "");
+        const k = scripts.findIndex(s => s.id === f.id);
+        if (k < 0){ scripts.push(f); added++; }
+        else if (!scripts[k].edited && (scripts[k].text !== f.text || scripts[k].title !== f.title || scripts[k].note !== f.note || (scripts[k].commande || "") !== f.commande)){ scripts[k] = f; updated++; }
+        else if (scripts[k].edited && f.commande && scripts[k].commande !== f.commande){ scripts[k].commande = f.commande; updated++; }
+      });
+    });
+    if (added || updated){
+      scripts = scripts.filter(s => s.id !== DEMO.id);
+      scripts.sort((a, b) => b.id.localeCompare(a.id));
+      saveScripts();
+    }
+    return { added, updated, total: scripts.filter(s => s.source === "tache").length };
+  }
+  function pickUpcoming(){
+    // le prochain Reel à tourner : la date la plus proche à partir d'aujourd'hui
+    const today = isoDay(new Date());
+    const dated = scripts.filter(s => /^\d{4}-\d{2}-\d{2}/.test(s.id)).sort((a, b) => a.id.localeCompare(b.id));
+    const next = dated.find(s => s.id.slice(0, 10) >= today);
+    return next || dated[dated.length - 1] || null;
+  }
+
+  /* ---------- Script reçu depuis le Studio VD (lien « Ouvrir dans le téléprompteur ») ---------- */
+  function scriptFromLink(){
+    const h = location.hash || "";
+    if (h.indexOf("#s=") !== 0) return null;
+    try {
+      const b64 = h.slice(3).replace(/-/g, "+").replace(/_/g, "/");
+      const bin = atob(b64 + "===".slice((b64.length + 3) % 4));
+      const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+      const o = JSON.parse(new TextDecoder().decode(bytes));
+      if (!o || !o.text) return null;
+      return { id: cleanId(o.id || ""), title: o.title || o.id || "Reel", note: o.note || "", text: cleanText(o.text), commande: o.commande || "", source: "studio" };
+    } catch(e){ return null; }
+  }
+  // Sur un téléphone, la caméra s'affiche en plein écran derrière le texte
+  if (!store.get("settings", null) && window.innerWidth < 820){ S.camfond = true; S.fs = 40; S.col = 92; save(); }
+  const fromLink = scriptFromLink();
+  if (fromLink){
+    const k = scripts.findIndex(x => x.id === fromLink.id);
+    if (k >= 0) scripts[k] = Object.assign({}, scripts[k], fromLink, { edited:false }); else scripts.unshift(fromLink);
+    scripts = scripts.filter(x => x.id !== DEMO.id || scripts.length === 1);
+    saveScripts(); S.current = fromLink.id; save();
+    try { history.replaceState(null, "", location.pathname + location.search); } catch(e){}
+  }
+
+  /* ---------- Démarrage ---------- */
+  applyLook(); renderSelect(); renderText();
+  if (fromLink) setTimeout(() => toast("Script « " + fromLink.title + " » prêt"), 400);
+  loadTaskScripts().then(() => {
+    const r = mergeTaskScripts();
+    const nxt = fromLink ? null : pickUpcoming();
+    if (nxt){ S.current = nxt.id; save(); }
+    renderSelect(); renderText();
+    if (r.added || r.updated) toast((r.added + r.updated) === 1 ? "1 nouveau script de ta tâche est prêt" : (r.added + r.updated) + " nouveaux scripts de ta tâche sont prêts");
+    else if (r.total) toast("Scripts de ta tâche à jour");
+  });
+  window.addEventListener("load", () => { renderText(); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw());
+  window.__tp = { parseBlocks, wordsOf, get scripts(){ return scripts; }, get takes(){ return takes; } };
+})();
+</script>
+</body>
+</html>

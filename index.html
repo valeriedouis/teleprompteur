@@ -79,6 +79,9 @@
 
   /* Compte à rebours */
   #count{position:absolute;inset:0;display:none;place-items:center;font-size:180px;font-weight:300;color:var(--coquille);background:rgba(13,29,54,.4);z-index:15}
+  #aTourner{position:absolute;top:8px;left:50%;transform:translateX(-50%);max-width:92%;z-index:6;background:rgba(19,41,75,.88);border:1px solid rgba(220,207,191,.3);color:var(--coquille);font-size:13px;padding:5px 12px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #aTourner b{color:var(--rose);font-weight:500}
+  #aTourner:empty{display:none}
   #endHint{position:absolute;left:50%;transform:translateX(-50%);top:66%;font-size:15px;color:var(--rose);display:none}
 
   /* Panneaux */
@@ -167,6 +170,8 @@
   <span class="spacer"></span>
   <button class="btn rose" id="btnImport">+ Coller mes scripts</button>
   <button class="btn" id="btnScripts">Mes scripts</button>
+  <button class="btn" id="btnPrises">Mes prises</button>
+  <button class="btn" id="btnMontages">Mes montages</button>
   <button class="btn" id="btnSettings">Réglages</button>
   <button class="btn" id="btnHelp">Aide</button>
 </header>
@@ -177,6 +182,7 @@
 
   <div id="prompter"><div id="textWrap"><div id="text"></div></div></div>
   <div id="readLine"></div>
+  <div id="aTourner"></div>
   <div id="endHint">Fin du texte. Appuie sur « Arrêter » quand tu as fini de parler.</div>
 
   <div id="preview">
@@ -212,11 +218,7 @@
   <select id="camSel"></select>
   <label for="micSel">Micro</label>
   <select id="micSel"></select>
-  <label for="fmtSel">Format de la prise</label>
-  <select id="fmtSel">
-    <option value="vertical">Vertical 9:16 pour les Reels (recadré au centre)</option>
-    <option value="original">Format d'origine de la caméra</option>
-  </select>
+  <p style="font-size:13px;color:var(--lin);margin:10px 0 0">La prise est enregistrée telle que la caméra la filme, son et image synchronisés. Ton monteur la recadre ensuite en vertical, centrée sur ton visage.</p>
   <div class="row"><input type="checkbox" id="optSelfie" checked><span>Aperçu en miroir (comme un selfie, la vidéo enregistrée reste à l'endroit)</span></div>
   <div class="row"><input type="checkbox" id="optCamFond"><span>Caméra en fond, derrière le texte</span></div>
 
@@ -244,8 +246,9 @@
     <li>Si un script manque, tu peux toujours le coller avec <b>+ Coller mes scripts</b>.</li>
     <li>Vérifie le Reel choisi en haut, place-toi face à une fenêtre, cadre-toi dans l'aperçu.</li>
     <li>Clique sur <b>Tourner la prise</b> : 3, 2, 1, l'enregistrement démarre et le texte défile. Lis la ligne marquée par les petits triangles.</li>
+    <li>Ton Reel monté arrive dans Fichiers &gt; iCloud Drive &gt; Monteur VD &gt; Reels montés. Regarde-le, puis bouton <b>Mes montages</b> : <b>✓ Je valide ce montage</b> (il part dans Photos, album Reels VD, prêt pour Instagram) ou <b>✏️ Envoyer la retouche</b> avec tes corrections.</li>
     <li>Une erreur ? <b>↺ Recommencer</b> : la prise repart de zéro (ton monteur ne coupe pas les phrases ratées).</li>
-    <li>À la fin, <b>Arrêter</b>, puis <b>▶ Lire ma prise</b>. Si elle te plaît, <b>✓ Valider ce Reel</b> : la prise part dans Documents &gt; Monteur-VD &gt; A_MONTER et le monteur la monte tout seul. Une notification te prévient quand ton Reel est prêt dans LIVRES.</li>
+    <li>À la fin, <b>Arrêter</b>, puis <b>▶ Lire ma prise</b>. Si elle te plaît, <b>✓ Valider ce Reel</b> : la prise part au monteur, qui la monte tout seul. Une notification te prévient quand ton Reel est prêt dans iCloud Drive &gt; Monteur VD &gt; Reels montés.</li>
   </ol>
   <h3>Filmer avec ton iPhone</h3>
   <p>Avec la Caméra de continuité d'Apple, ton iPhone devient la caméra de ton Mac : fixe-le en haut de l'écran, à la verticale, verrouillé, puis choisis-le dans Réglages &gt; Caméra. Tu gardes la qualité de l'iPhone et le texte défile juste en dessous de son objectif.</p>
@@ -294,6 +297,40 @@
   </div>
 </div>
 
+<!-- Valider ou retoucher un montage -->
+<div class="modal" id="montageModal">
+  <div class="card">
+    <h2>Mes montages</h2>
+    <p>Regarde ton Reel monté dans l'app <b>Fichiers</b> &gt; <b>iCloud Drive</b> &gt; <b>Monteur VD</b> &gt; <b>Reels montés</b>, puis reviens ici pour le valider ou demander une retouche.</p>
+    <ul class="list" id="montageList"></ul>
+    <div id="montageBox" style="display:none">
+      <h3 id="montageTitre" style="margin:18px 0 4px;font-weight:500"></h3>
+      <p class="hint" id="montageEtat"></p>
+      <div class="actions">
+        <button class="btn valid" id="montageOk">✓ Je valide ce montage</button>
+      </div>
+      <p style="margin-top:16px"><b>Ou demande une retouche</b> : écris simplement ce que tu veux changer.</p>
+      <textarea id="retoucheTexte" style="height:120px" placeholder="Exemple : le chiffre 66 % arrive trop tôt, décale-le d'une seconde. Corrige « Valérie » dans les sous-titres. Mets la couverture sur fond bleu nuit."></textarea>
+      <div class="actions"><button class="btn plein" id="retoucheOk">✏️ Envoyer la retouche au monteur</button></div>
+      <div class="msg" id="montageMsg"></div>
+      <p style="margin-top:16px"><b>Ce Reel est publié ?</b> Tes prises de ce Reel sont gardées sur cet appareil jusqu'à ce que tu le confirmes ici.</p>
+      <div class="actions"><button class="btn" id="publieOk">📣 Il est publié : libérer mes prises</button></div>
+    </div>
+    <div class="actions"><button class="btn" data-closemodal="montageModal">Fermer</button></div>
+  </div>
+</div>
+
+<!-- Prises gardées sur l'appareil -->
+<div class="modal" id="prisesModal">
+  <div class="card">
+    <h2>Mes prises</h2>
+    <p>Chaque prise est gardée sur cet appareil, même si tu fermes la page, jusqu'à ce que son Reel soit publié. Si une prise n'est pas arrivée au monteur, touche <b>Renvoyer au monteur</b> et accepte les 2 téléchargements.</p>
+    <p class="hint" id="prisesPlace"></p>
+    <ul class="list" id="prisesList"></ul>
+    <div class="actions"><button class="btn" data-closemodal="prisesModal">Fermer</button></div>
+  </div>
+</div>
+
 <!-- Revoir la prise -->
 <div class="modal" id="takeModal">
   <div class="card">
@@ -338,7 +375,7 @@
     $("fsVal").textContent = S.fs + " px"; $("colVal").textContent = S.col + " %"; $("rlVal").textContent = S.rl + " %";
     $("fsRange").value = S.fs; $("colRange").value = S.col; $("rlRange").value = S.rl; $("alignSel").value = S.align;
     $("optIndic").checked = S.indic; $("optMiroir").checked = S.miroir; $("optCount").checked = S.count;
-    $("optSelfie").checked = S.selfie; $("optCamFond").checked = S.camfond; $("fmtSel").value = S.fmt;
+    $("optSelfie").checked = S.selfie; $("optCamFond").checked = S.camfond;
     $("wpmVal").textContent = S.wpm;
     document.querySelectorAll("#text .indic").forEach(el => el.style.display = S.indic ? "" : "none");
   }
@@ -397,6 +434,8 @@
     }).join("");
     box.innerHTML = html;
     const n = wordsOf(c.text);
+    const valide = (store.get("valides", {}) || {})[c.id];
+    $("aTourner").innerHTML = /^\d{4}-\d{2}-\d{2}/.test(c.id) ? (valide ? "✓ Déjà validé : " : "🎬 <b>À tourner</b> : ") + esc(c.title) + (c.note ? " · " + esc(c.note) : "") : "";
     $("scriptInfo").textContent = `${n} mots · environ ${Math.round(n / S.wpm * 60)} s à ${S.wpm} mots/min` + (c.note ? " · " + c.note : "");
     applyLook();
     resetScroll();
@@ -454,7 +493,7 @@
     }
     $("camVideo").srcObject = stream; $("bgVideo").srcObject = stream;
     $("noCam").style.display = "none"; camOk = true;
-    $("camVideo").onloadedmetadata = () => { const vt = $("camVideo"); $("preview").classList.toggle("paysage", S.fmt === "original" && vt.videoWidth > vt.videoHeight); };
+    $("camVideo").onloadedmetadata = () => { const vt = $("camVideo"); $("preview").classList.remove("paysage"); };
     await listDevices();
     setupMeter();
   }
@@ -519,19 +558,9 @@
   function extOf(mime){ return /mp4/.test(mime) ? "mp4" : "webm"; }
 
   function recordingStream(){
-    const vt = $("camVideo"); const w = vt.videoWidth, h = vt.videoHeight;
-    if (S.fmt !== "vertical" || !w || !h || h >= w * 0.9) return stream; // déjà vertical, ou format d'origine
-    const cw = Math.round(h * 9 / 16 / 2) * 2, ch = h;
-    const cv = document.createElement("canvas"); cv.width = cw; cv.height = ch;
-    const ctx = cv.getContext("2d");
-    const sx = Math.round((w - cw) / 2);
-    let live = true;
-    const loop = () => { if (!live) return; ctx.drawImage(vt, sx, 0, cw, ch, 0, 0, cw, ch); requestAnimationFrame(loop); };
-    loop();
-    canvasLoop = () => { live = false; };
-    const out = cv.captureStream(30);
-    stream.getAudioTracks().forEach(t => out.addTrack(t));
-    return out;
+    // Toujours le flux direct de la caméra et du micro : aucun ré-encodage dans la page,
+    // donc pas de décalage entre la voix et les lèvres.
+    return stream;
   }
 
   async function countdown(){
@@ -563,11 +592,14 @@
       if (wasDiscard){ startTake(); return; }
       const blob = new Blob(chunks, { type:usedMime.split(";")[0] });
       const c = current();
-      takes.push({ blob, url:URL.createObjectURL(blob), ext:extOf(usedMime), id:(c ? c.id : stampId()), dur:Math.round((Date.now() - recStart) / 1000),
-                   title:(c ? c.title : ""), text:(c ? c.text : ""), commande:(c && c.commande) || "", lue:false, validee:false });
+      const tid = c ? c.id : stampId();
+      const nt = { key: tid + "__" + Date.now(), cree: new Date().toISOString(), blob, url:URL.createObjectURL(blob), ext:extOf(usedMime), id:tid, dur:Math.round((Date.now() - recStart) / 1000),
+                   title:(c ? c.title : ""), text:(c ? c.text : ""), commande:(c && c.commande) || "", lue:false, validee:false, envoyee:null };
+      takes.push(nt);
+      garderPrise(nt);
       showTakes(takes.length - 1);
     };
-    rec.start(1000);
+    rec.start(); // un seul fichier à l'arrêt : son et image restent calés
     recStart = Date.now();
     document.body.classList.add("rec"); $("btnRec").textContent = "■ Arrêter";
     recTimer = setInterval(updTimer, 250); updTimer();
@@ -591,8 +623,11 @@
   function showTakes(i){
     shown = i;
     const list = $("takeList"); list.innerHTML = "";
+    let n = 0;
     takes.forEach((t, k) => {
-      const b = document.createElement("button"); b.textContent = `Prise ${k + 1} · ${t.dur} s`; if (k === i) b.className = "on";
+      if (t.id !== takes[i].id) return;
+      n++;
+      const b = document.createElement("button"); b.textContent = `Prise ${n} · ${t.dur} s${t.validee ? " · ✓" : ""}`; if (k === i) b.className = "on";
       b.onclick = () => showTakes(k); list.appendChild(b);
     });
     const t = takes[i];
@@ -609,7 +644,7 @@
     $("takeHint").textContent = t.validee ? "" : (t.lue ? "Elle te plaît ? Valide-la : elle part au monteur, qui la monte tout seul." : "Lis ta prise en entier avant de la valider.");
   }
   $("takePlay").onclick = () => { const v = $("takeVideo"); try { v.currentTime = 0; } catch(e){} const p = v.play(); if (p && p.catch) p.catch(() => {}); };
-  $("takeVideo").addEventListener("play", () => { const t = takes[shown]; if (t && !t.lue){ t.lue = true; updTakeButtons(); } });
+  $("takeVideo").addEventListener("play", () => { const t = takes[shown]; if (t && !t.lue){ t.lue = true; updTakeButtons(); garderPrise(t); } });
 
   function saveBlob(blob, name){
     const url = (blob instanceof Blob) ? URL.createObjectURL(blob) : blob;
@@ -617,6 +652,13 @@
     document.body.appendChild(a); a.click(); a.remove();
     if (blob instanceof Blob) setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
+  const REGLES_VALERIE = [
+    "RÈGLES PERMANENTES DE VALÉRIE (elles passent avant la commande ci-dessous) :",
+    "1. Sous-titres sans aucun fond : ni boîte, ni bandeau, ni aplat derrière le texte.",
+    "2. Rien ne doit apparaître sur son visage : ni sous-titre, ni habillage, ni étiquette, ni chiffre, ni bouton. Place chaque élément au-dessus de la tête ou sous le menton, et vérifie-le sur la planche de contrôle.",
+    "3. Bruit de fond : réduis-le sur toute la prise, et supprime les bruits parasites avant le premier mot (souffle, clic, manipulation du téléphone).",
+    "4. Ne coupe jamais le silence du début s'il y a du mouvement à l'image (geste, regard, mimique, objet montré, entrée dans le cadre) : c'est peut-être un hook visuel. Garde ce début, sans son parasite, et pose l'accroche dessus. Pour le savoir, regarde 4 à 6 images avant le premier mot (ou utilise le filtre freezedetect de ffmpeg). Coupe seulement un début immobile et silencieux. En cas de doute, garde-le."
+  ];
   function montageText(t){
     const rush = `A_MONTER/${t.id}.${t.ext}`;
     const d = new Date();
@@ -628,6 +670,9 @@
       "MONTAGE AUTOMATIQUE demandé par Valérie depuis son téléprompteur, après avoir revu et validé sa prise.",
       "Valérie n'est pas devant l'écran : ne pose aucune question et ne t'arrête pas en attendant une réponse. Fais toi-même les choix nécessaires en suivant CLAUDE.md, GUIDE_STYLE.md et le skill monter-video, puis va jusqu'au bout : montage, relecture (transcription corrigée, planche de contrôle), livraison dans LIVRES (vidéo, couverture, légende).",
       `Le rush est ${rush}.`,
+      `Nomme ce montage exactement « ${t.id} » : LIVRES/${t.id}.mp4, LIVRES/${t.id}_couverture et LIVRES/${t.id}_legende.txt (et LIVRES/${t.id}_plan.json pour le plan), pour que Valérie puisse demander une retouche plus tard.`,
+      "",
+      ...REGLES_VALERIE,
       ""
     ];
     if (t.commande){
@@ -643,19 +688,118 @@
   }
   $("takeOk").onclick = () => {
     const t = takes[shown]; if (!t || !t.lue || t.validee) return;
+    envoyerAuMonteur(t);
+    updTakeButtons();
+    try { const ok = store.get("valides", {}); ok[t.id] = new Date().toISOString(); store.set("valides", ok); } catch(e){}
+    try { const cc = current(); if (cc && cc.id === t.id) { const tmp = pos; renderText(); pos = tmp; draw(); } } catch(e){}
+    $("takeMsg").className = "msg ok";
+    $("takeMsg").innerHTML = "Ta prise est partie au monteur. Vérifie que tes 2 téléchargements sont terminés. Ta prise reste gardée sur cet appareil jusqu'à la publication : si elle n'arrive pas, bouton <b>Mes prises</b> puis <b>Renvoyer au monteur</b>. Ton iMac la monte tout seul et te prévient par une notification. Ton Reel t'attendra dans <b>iCloud Drive &gt; Monteur VD &gt; Reels montés</b>. Regarde-le, puis valide-le ou demande une retouche avec le bouton <b>Mes montages</b>.";
+  };
+  function envoyerAuMonteur(t){
     saveBlob(t.blob, `${t.id}.${t.ext}`);
     setTimeout(() => saveBlob(new Blob([montageText(t)], { type:"text/plain;charset=utf-8" }), `${t.id}.montage.txt`), 1500);
-    t.validee = true; updTakeButtons();
-    try { const ok = store.get("valides", {}); ok[t.id] = new Date().toISOString(); store.set("valides", ok); } catch(e){}
-    $("takeMsg").className = "msg ok";
-    $("takeMsg").innerHTML = "Ta prise est partie au monteur. Il la monte tout seul : tu recevras une notification sur ton Mac, et ton Reel t'attendra dans <b>Documents &gt; Monteur-VD &gt; LIVRES</b>.";
-  };
+    t.validee = true; t.envoyee = new Date().toISOString();
+    garderPrise(t);
+  }
   $("takeDl").onclick = () => {
     const t = takes[shown]; if (!t) return;
     saveBlob(t.blob, `${t.id}.${t.ext}`);
     $("takeMsg").className = "msg"; $("takeMsg").textContent = "Prise enregistrée, sans montage automatique.";
   };
   $("takeAgain").onclick = () => { closeModal("takeModal"); startTake(); };
+
+  /* ---------- Prises gardées sur l'appareil jusqu'à la publication ---------- */
+  const PRISES = (() => {
+    let dbp = null;
+    function ouvrir(){
+      if (!dbp) dbp = new Promise((res, rej) => {
+        try {
+          const r = indexedDB.open("vdtp", 1);
+          r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains("prises")) r.result.createObjectStore("prises", { keyPath:"key" }); };
+          r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+        } catch(e){ rej(e); }
+      });
+      return dbp;
+    }
+    async function tx(mode, fn){
+      const db = await ouvrir();
+      return new Promise((res, rej) => {
+        const t = db.transaction("prises", mode); let out;
+        const r = fn(t.objectStore("prises")); if (r) r.onsuccess = () => { out = r.result; };
+        t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+      });
+    }
+    return { put: p => tx("readwrite", st => st.put(p)), all: () => tx("readonly", st => st.getAll()), del: k => tx("readwrite", st => st.delete(k)) };
+  })();
+  let persistDemande = false;
+  async function garderPrise(t){
+    if (!t || !t.key) return;
+    try {
+      await PRISES.put({ key:t.key, cree:t.cree, id:t.id, blob:t.blob, ext:t.ext, dur:t.dur, title:t.title, text:t.text, commande:t.commande, lue:!!t.lue, validee:!!t.validee, envoyee:t.envoyee || null });
+      t.gardee = true;
+      if (!persistDemande && navigator.storage && navigator.storage.persist){ persistDemande = true; navigator.storage.persist().catch(() => {}); }
+    } catch(e){
+      t.gardee = false;
+      toast("Cette prise n'a pas pu être gardée sur l'appareil : utilise « Enregistrer sans monter » pour ne pas la perdre.");
+    }
+  }
+  async function libererPrises(id){
+    let n = 0;
+    for (let k = takes.length - 1; k >= 0; k--){
+      const t = takes[k]; if (t.id !== id) continue;
+      try { await PRISES.del(t.key); } catch(e){}
+      try { URL.revokeObjectURL(t.url); } catch(e){}
+      takes.splice(k, 1); n++;
+    }
+    try { (await PRISES.all()).filter(p => p.id === id).forEach(p => { PRISES.del(p.key); n++; }); } catch(e){}
+    return n;
+  }
+  async function chargerPrises(){
+    try {
+      const m = store.get("montages", {});
+      const all = await PRISES.all();
+      for (const p of all){
+        if (m[p.id] && m[p.id].publie){ await PRISES.del(p.key); continue; }
+        if (!takes.some(t => t.key === p.key)) takes.push(Object.assign({}, p, { url:URL.createObjectURL(p.blob), gardee:true }));
+      }
+      takes.sort((a, b) => (a.cree || "").localeCompare(b.cree || ""));
+    } catch(e){}
+  }
+  function taille(o){ return o > 1e9 ? (o / 1e9).toFixed(1).replace(".", ",") + " Go" : Math.round(o / 1e6) + " Mo"; }
+  async function renderPrises(){
+    const ul = $("prisesList"); ul.innerHTML = "";
+    if (!takes.length){ ul.innerHTML = "<li><span>Aucune prise gardée pour l'instant.</span></li>"; }
+    takes.map((t, k) => [t, k]).reverse().forEach(([t, k]) => {
+      const li = document.createElement("li");
+      const quand = t.cree ? new Date(t.cree).toLocaleString("fr-FR", { weekday:"short", day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" }) : "";
+      const etat = t.envoyee ? "envoyée au monteur le " + new Date(t.envoyee).toLocaleString("fr-FR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" }) : (t.validee ? "validée" : "pas encore validée");
+      li.innerHTML = `<span>${esc(t.title || t.id)}<br><small>${esc(quand)} · ${t.dur} s · ${taille(t.blob.size)} · ${esc(etat)}${t.gardee === false ? " · ⚠️ non gardée" : ""}</small></span>`;
+      const v = document.createElement("button"); v.className = "btn"; v.textContent = "Revoir"; v.onclick = () => { closeModal("prisesModal"); showTakes(k); };
+      li.appendChild(v);
+      if (t.validee){
+        const r = document.createElement("button"); r.className = "btn"; r.textContent = "Renvoyer au monteur";
+        r.onclick = () => { envoyerAuMonteur(t); r.textContent = "Envoyée ✓"; toast("Accepte les 2 téléchargements : la vidéo, puis les indications."); renderPrisesBientot(); };
+        li.appendChild(r);
+      }
+      const d = document.createElement("button"); d.className = "btn"; d.textContent = "Supprimer";
+      d.onclick = async () => {
+        if (!d.dataset.sure){ d.dataset.sure = 1; d.textContent = "Confirmer ?"; return; }
+        try { await PRISES.del(t.key); } catch(e){}
+        try { URL.revokeObjectURL(t.url); } catch(e){}
+        const i = takes.indexOf(t); if (i >= 0) takes.splice(i, 1);
+        renderPrises();
+      };
+      li.appendChild(d);
+      ul.appendChild(li);
+    });
+    try {
+      const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null;
+      const tot = takes.reduce((a, t) => a + (t.blob ? t.blob.size : 0), 0);
+      $("prisesPlace").textContent = `${takes.length} prise(s) gardée(s), ${taille(tot)}` + (est && est.quota ? ` · place disponible pour ce site : environ ${taille(Math.max(0, est.quota - est.usage))}` : "") + ". Elles sont supprimées quand tu touches « Il est publié » dans Mes montages.";
+    } catch(e){ $("prisesPlace").textContent = ""; }
+  }
+  function renderPrisesBientot(){ setTimeout(renderPrises, 300); }
+  $("btnPrises").onclick = () => { renderPrises(); openModal("prisesModal"); };
 
   /* ---------- Import et gestion des scripts ---------- */
   $("btnImport").onclick = () => { $("importText").value = ""; $("importMsg").textContent = ""; openModal("importModal"); setTimeout(() => $("importText").focus(), 50); };
@@ -702,6 +846,84 @@
     S.current = s.id; save(); saveScripts(); $("editBox").style.display = "none"; renderList(); renderSelect(); renderText();
   };
   $("editCancel").onclick = () => { $("editBox").style.display = "none"; };
+  /* ---------- Valider ou retoucher un montage ---------- */
+  let montageId = null;
+  const etats = () => store.get("montages", {});
+  function etatMontage(id){
+    const m = etats()[id] || {}, v = store.get("valides", {})[id];
+    if (m.publie) return { cls:"ok", txt:"Publié · prises libérées le " + new Date(m.publie).toLocaleDateString("fr-FR") };
+    if (m.valide) return { cls:"ok", txt:"Montage validé le " + new Date(m.valide).toLocaleDateString("fr-FR") + ", envoyé dans Photos" };
+    if (m.retouche) return { cls:"", txt:"Retouche demandée le " + new Date(m.retouche).toLocaleDateString("fr-FR") + " : la nouvelle version remplacera l'ancienne dans Reels montés" };
+    if (v) return { cls:"", txt:"Prise validée : montage en cours ou prêt à vérifier" };
+    return { cls:"", txt:"Pas encore tourné" };
+  }
+  function renderMontages(){
+    const ul = $("montageList"); ul.innerHTML = "";
+    scripts.filter(s => /^\d{4}-\d{2}-\d{2}/.test(s.id)).sort((a, b) => b.id.localeCompare(a.id)).slice(0, 8).forEach(s => {
+      const e = etatMontage(s.id);
+      const li = document.createElement("li");
+      li.innerHTML = `<span>${esc(s.title)}<br><small>${esc(e.txt)}</small></span>`;
+      const b = document.createElement("button"); b.className = "btn"; b.textContent = "Ouvrir"; b.onclick = () => ouvrirMontage(s.id);
+      li.appendChild(b); ul.appendChild(li);
+    });
+    if (!ul.children.length) ul.innerHTML = "<li><span>Aucun Reel pour l'instant.</span></li>";
+  }
+  function ouvrirMontage(id){
+    const s = scripts.find(x => x.id === id); if (!s) return;
+    montageId = id;
+    $("montageBox").style.display = "block";
+    $("montageTitre").textContent = s.title;
+    $("montageEtat").textContent = etatMontage(id).txt + " · fichier : " + id + ".mp4";
+    $("retoucheTexte").value = ""; $("montageMsg").textContent = ""; $("montageMsg").className = "msg";
+  }
+  function ouvrirMesMontages(id){ renderMontages(); $("montageBox").style.display = "none"; openModal("montageModal"); if (id) ouvrirMontage(id); }
+  function noterMontage(id, cle){ const m = etats(); m[id] = Object.assign({}, m[id], { [cle]: new Date().toISOString() }); if (cle === "retouche") delete m[id].valide; store.set("montages", m); }
+  $("btnMontages").onclick = () => ouvrirMesMontages(null);
+  $("montageOk").onclick = () => {
+    if (!montageId) return;
+    const d = new Date();
+    saveBlob(new Blob([`ID: ${montageId}\nMONTAGE_VALIDE_LE: ${d.toLocaleDateString("fr-FR")} ${d.toLocaleTimeString("fr-FR")}\n`], { type:"text/plain;charset=utf-8" }), `${montageId}.montage-valide.txt`);
+    noterMontage(montageId, "valide"); renderMontages(); ouvrirMontage(montageId);
+    $("montageMsg").className = "msg ok";
+    $("montageMsg").innerHTML = "Montage validé. Vérifie que le téléchargement est terminé : ton iMac ajoute alors la vidéo et sa couverture dans <b>Photos</b>, album <b>Reels VD</b>, prêtes pour Instagram.";
+  };
+  $("publieOk").onclick = async () => {
+    if (!montageId) return;
+    const b = $("publieOk");
+    if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = "Confirmer : supprimer mes prises de ce Reel"; return; }
+    delete b.dataset.sure; b.textContent = "📣 Il est publié : libérer mes prises";
+    const n = await libererPrises(montageId);
+    noterMontage(montageId, "publie"); renderMontages(); ouvrirMontage(montageId);
+    $("montageMsg").className = "msg ok";
+    $("montageMsg").textContent = n ? (n === 1 ? "1 prise supprimée de cet appareil." : n + " prises supprimées de cet appareil.") + " Ton Reel monté reste dans Reels montés." : "Aucune prise de ce Reel n'était gardée sur cet appareil.";
+  };
+  $("retoucheOk").onclick = () => {
+    if (!montageId) return;
+    const texte = $("retoucheTexte").value.trim();
+    if (!texte){ $("montageMsg").className = "msg"; $("montageMsg").textContent = "Écris d'abord ce que tu veux corriger."; return; }
+    const s = scripts.find(x => x.id === montageId) || {};
+    const d = new Date();
+    const lignes = [
+      `ID: ${montageId}`,
+      `RETOUCHE_DEMANDEE_LE: ${d.toLocaleDateString("fr-FR")} ${d.toLocaleTimeString("fr-FR")}`,
+      "",
+      `RETOUCHE demandée par Valérie sur le Reel « ${s.title || montageId} ».`,
+      "Valérie n'est pas devant l'écran : ne pose aucune question. Fais la retouche en suivant CLAUDE.md, GUIDE_STYLE.md et le skill monter-video, puis relis comme pour un montage.",
+      `Le montage actuel est dans iCloud Drive > Monteur VD > Reels montés (${montageId}.mp4, sa couverture et sa légende), le plan dans LIVRES/${montageId}_plan.json s'il existe, le rush dans A_MONTER/${montageId}.*.`,
+      `Ne refais pas tout : modifie seulement ce que Valérie demande, en repartant du plan existant, puis relance le montage. Livre la nouvelle version dans LIVRES sous le même nom (${montageId}.mp4, ${montageId}_couverture, ${montageId}_legende.txt) : elle remplacera l'ancienne.`,
+      "",
+      ...REGLES_VALERIE,
+      "",
+      "Ce que Valérie veut changer :",
+      texte,
+      ""
+    ];
+    saveBlob(new Blob([lignes.join("\n")], { type:"text/plain;charset=utf-8" }), `${montageId}.retouche.txt`);
+    noterMontage(montageId, "retouche"); renderMontages(); ouvrirMontage(montageId);
+    $("montageMsg").className = "msg ok";
+    $("montageMsg").innerHTML = "Retouche envoyée. Vérifie que le téléchargement est terminé : ton iMac refait le montage et te prévient par une notification. La nouvelle version remplacera l'ancienne dans <b>Reels montés</b>. Reviens ensuite ici pour la valider.";
+  };
+
   $("btnScripts").onclick = () => { $("editBox").style.display = "none"; renderList(); openModal("scriptsModal"); };
 
   /* ---------- Panneaux et fenêtres ---------- */
@@ -714,7 +936,7 @@
   document.querySelectorAll("[data-closemodal]").forEach(b => b.onclick = () => closeModal(b.dataset.closemodal));
   let toastEl;
   function toast(t){
-    if (!toastEl){ toastEl = document.createElement("div"); toastEl.style.cssText = "position:fixed;top:70px;left:50%;transform:translateX(-50%);background:var(--coquille);color:var(--nuit);padding:10px 18px;border-radius:999px;font-size:14px;z-index:60;transition:opacity .3s"; document.body.appendChild(toastEl); }
+    if (!toastEl){ toastEl = document.createElement("div"); toastEl.style.cssText = "position:fixed;top:104px;left:50%;transform:translateX(-50%);background:var(--coquille);color:var(--nuit);padding:10px 18px;border-radius:999px;font-size:14px;z-index:60;transition:opacity .3s"; document.body.appendChild(toastEl); }
     toastEl.textContent = t; toastEl.style.opacity = 1; clearTimeout(toastEl._t); toastEl._t = setTimeout(() => toastEl.style.opacity = 0, 2600);
   }
   const alertMsg = toast;
@@ -728,7 +950,6 @@
   $("optCount").onchange = (e) => { S.count = e.target.checked; save(); };
   $("optSelfie").onchange = (e) => { S.selfie = e.target.checked; save(); applyLook(); };
   $("optCamFond").onchange = (e) => { S.camfond = e.target.checked; save(); applyLook(); };
-  $("fmtSel").onchange = (e) => { S.fmt = e.target.value; save(); const vt = $("camVideo"); $("preview").classList.toggle("paysage", S.fmt === "original" && vt.videoWidth > vt.videoHeight); };
 
   /* ---------- Clavier ---------- */
   document.addEventListener("keydown", (e) => {
@@ -761,11 +982,17 @@
   }
   function loadTaskScripts(){
     window.VD_SCRIPTS = window.VD_SCRIPTS || [];
-    return Promise.all(weekFiles().map(name => new Promise(res => {
+    const enLigne = (location.protocol === "http:" || location.protocol === "https:")
+      ? fetch("scripts.json?v=" + Date.now(), { cache:"no-store" }).then(r => r.ok ? r.json() : null).then(j => {
+          const liste = j && Array.isArray(j.semaines) ? j.semaines : [];
+          liste.forEach(e => window.VD_SCRIPTS.push(e));
+        }).catch(() => {})
+      : Promise.resolve();
+    return Promise.all([enLigne].concat(weekFiles().map(name => new Promise(res => {
       const el = document.createElement("script"); el.src = name;
       el.onload = () => res(true); el.onerror = () => { el.remove(); res(false); };
       document.head.appendChild(el);
-    })));
+    }))));
   }
   function mergeTaskScripts(){
     const entries = (window.VD_SCRIPTS || []).slice().sort((a, b) => String(a.semaine).localeCompare(String(b.semaine)));
@@ -792,21 +1019,22 @@
     // le prochain Reel à tourner : la date la plus proche à partir d'aujourd'hui
     const today = isoDay(new Date());
     const dated = scripts.filter(s => /^\d{4}-\d{2}-\d{2}/.test(s.id)).sort((a, b) => a.id.localeCompare(b.id));
-    const next = dated.find(s => s.id.slice(0, 10) >= today);
+    const valides = store.get("valides", {});
+    const next = dated.find(s => s.id.slice(0, 10) >= today && !valides[s.id]) || dated.find(s => s.id.slice(0, 10) >= today);
     return next || dated[dated.length - 1] || null;
   }
 
   /* ---------- Script reçu depuis le Studio VD (lien « Ouvrir dans le téléprompteur ») ---------- */
   function scriptFromLink(){
     const h = location.hash || "";
-    if (h.indexOf("#s=") !== 0) return null;
+    if (h.indexOf("#s=") !== 0 && h.indexOf("#m=") !== 0) return null;
     try {
       const b64 = h.slice(3).replace(/-/g, "+").replace(/_/g, "/");
       const bin = atob(b64 + "===".slice((b64.length + 3) % 4));
       const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
       const o = JSON.parse(new TextDecoder().decode(bytes));
       if (!o || !o.text) return null;
-      return { id: cleanId(o.id || ""), title: o.title || o.id || "Reel", note: o.note || "", text: cleanText(o.text), commande: o.commande || "", source: "studio" };
+      return { id: cleanId(o.id || ""), title: o.title || o.id || "Reel", note: o.note || "", text: cleanText(o.text), commande: o.commande || "", source: "studio", montage: h.indexOf("#m=") === 0 };
     } catch(e){ return null; }
   }
   // Sur un téléphone, la caméra s'affiche en plein écran derrière le texte
@@ -822,7 +1050,9 @@
 
   /* ---------- Démarrage ---------- */
   applyLook(); renderSelect(); renderText();
-  if (fromLink) setTimeout(() => toast("Script « " + fromLink.title + " » prêt"), 400);
+  chargerPrises();
+  if (fromLink && fromLink.montage) setTimeout(() => ouvrirMesMontages(fromLink.id), 300);
+  else if (fromLink) setTimeout(() => toast("Script « " + fromLink.title + " » prêt"), 400);
   loadTaskScripts().then(() => {
     const r = mergeTaskScripts();
     const nxt = fromLink ? null : pickUpcoming();
@@ -833,7 +1063,7 @@
   });
   window.addEventListener("load", () => { renderText(); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw());
-  window.__tp = { parseBlocks, wordsOf, get scripts(){ return scripts; }, get takes(){ return takes; } };
+  window.__tp = { parseBlocks, wordsOf, get scripts(){ return scripts; }, get takes(){ return takes; }, PRISES, chargerPrises };
 })();
 </script>
 </body>

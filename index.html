@@ -246,9 +246,9 @@
     <li>Si un script manque, tu peux toujours le coller avec <b>+ Coller mes scripts</b>.</li>
     <li>Vérifie le Reel choisi en haut, place-toi face à une fenêtre, cadre-toi dans l'aperçu.</li>
     <li>Clique sur <b>Tourner la prise</b> : 3, 2, 1, l'enregistrement démarre et le texte défile. Lis la ligne marquée par les petits triangles.</li>
-    <li>Ton Reel monté arrive dans Fichiers &gt; iCloud Drive &gt; Monteur VD &gt; Reels montés. Regarde-le, puis bouton <b>Mes montages</b> : <b>✓ Je valide ce montage</b> (il part dans Photos, album Reels VD, prêt pour Instagram) ou <b>✏️ Envoyer la retouche</b> avec tes corrections.</li>
+    <li>Ton Reel monté arrive dans l'app <b>Photos</b>, album <b>Reels VD</b> (légende dans les infos ⓘ), et un iMessage te prévient. Regarde-le, puis bouton <b>Mes montages</b> : <b>✓ Je valide ce montage</b> ou <b>✏️ Envoyer la retouche</b> avec tes corrections.</li>
     <li>Une erreur ? <b>↺ Recommencer</b> : la prise repart de zéro (ton monteur ne coupe pas les phrases ratées).</li>
-    <li>À la fin, <b>Arrêter</b>, puis <b>▶ Lire ma prise</b>. Si elle te plaît, <b>✓ Valider ce Reel</b> : la prise part au monteur, qui la monte tout seul. Une notification te prévient quand ton Reel est prêt dans iCloud Drive &gt; Monteur VD &gt; Reels montés.</li>
+    <li>À la fin, <b>Arrêter</b>, puis <b>▶ Lire ma prise</b>. Si elle te plaît, <b>✓ Valider ce Reel</b> : la prise part au monteur, qui la monte tout seul. Un iMessage te prévient quand ton Reel est prêt dans Photos, album Reels VD.</li>
   </ol>
   <h3>Filmer avec ton iPhone</h3>
   <p>Avec la Caméra de continuité d'Apple, ton iPhone devient la caméra de ton Mac : fixe-le en haut de l'écran, à la verticale, verrouillé, puis choisis-le dans Réglages &gt; Caméra. Tu gardes la qualité de l'iPhone et le texte défile juste en dessous de son objectif.</p>
@@ -301,7 +301,7 @@
 <div class="modal" id="montageModal">
   <div class="card">
     <h2>Mes montages</h2>
-    <p>Regarde ton Reel monté dans l'app <b>Fichiers</b> &gt; <b>iCloud Drive</b> &gt; <b>Monteur VD</b> &gt; <b>Reels montés</b>, puis reviens ici pour le valider ou demander une retouche.</p>
+    <p>Regarde ton Reel monté dans l'app <b>Photos</b>, album <b>Reels VD</b>, puis reviens ici pour le valider ou demander une retouche.</p>
     <ul class="list" id="montageList"></ul>
     <div id="montageBox" style="display:none">
       <h3 id="montageTitre" style="margin:18px 0 4px;font-weight:500"></h3>
@@ -653,11 +653,7 @@
     if (blob instanceof Blob) setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
   const REGLES_VALERIE = [
-    "RÈGLES PERMANENTES DE VALÉRIE (elles passent avant la commande ci-dessous) :",
-    "1. Sous-titres sans aucun fond : ni boîte, ni bandeau, ni aplat derrière le texte.",
-    "2. Rien ne doit apparaître sur son visage : ni sous-titre, ni habillage, ni étiquette, ni chiffre, ni bouton. Place chaque élément au-dessus de la tête ou sous le menton, et vérifie-le sur la planche de contrôle.",
-    "3. Bruit de fond : réduis-le sur toute la prise, et supprime les bruits parasites avant le premier mot (souffle, clic, manipulation du téléphone).",
-    "4. Ne coupe jamais le silence du début s'il y a du mouvement à l'image (geste, regard, mimique, objet montré, entrée dans le cadre) : c'est peut-être un hook visuel. Garde ce début, sans son parasite, et pose l'accroche dessus. Pour le savoir, regarde 4 à 6 images avant le premier mot (ou utilise le filtre freezedetect de ffmpeg). Coupe seulement un début immobile et silencieux. En cas de doute, garde-le."
+    "RÈGLES PERMANENTES DE VALÉRIE : relis et applique le bloc « RÈGLES PERMANENTES DE VALÉRIE (téléprompteur) » de CLAUDE.md. Il passe avant la commande ci-dessous (sous-titres sans fond, rien sur le visage, scènes sans parole gardées quand il s'y passe quelque chose, indications entre parenthèses du script gardées, bruit de fond réduit)."
   ];
   function montageText(t){
     const rush = `A_MONTER/${t.id}.${t.ext}`;
@@ -693,7 +689,7 @@
     try { const ok = store.get("valides", {}); ok[t.id] = new Date().toISOString(); store.set("valides", ok); } catch(e){}
     try { const cc = current(); if (cc && cc.id === t.id) { const tmp = pos; renderText(); pos = tmp; draw(); } } catch(e){}
     $("takeMsg").className = "msg ok";
-    $("takeMsg").innerHTML = "Ta prise est partie au monteur. Vérifie que tes 2 téléchargements sont terminés. Ta prise reste gardée sur cet appareil jusqu'à la publication : si elle n'arrive pas, bouton <b>Mes prises</b> puis <b>Renvoyer au monteur</b>. Ton iMac la monte tout seul et te prévient par une notification. Ton Reel t'attendra dans <b>iCloud Drive &gt; Monteur VD &gt; Reels montés</b>. Regarde-le, puis valide-le ou demande une retouche avec le bouton <b>Mes montages</b>.";
+    $("takeMsg").innerHTML = "Ta prise est partie au monteur. Vérifie que tes 2 téléchargements sont terminés. Ta prise reste gardée sur cet appareil jusqu'à la publication : si elle n'arrive pas, bouton <b>Mes prises</b> puis <b>Renvoyer au monteur</b>. Ton iMac la monte tout seul et te prévient par iMessage. Ton Reel t'attendra dans <b>Photos, album Reels VD</b>. Regarde-le, puis valide-le ou demande une retouche avec le bouton <b>Mes montages</b>.";
   };
   function envoyerAuMonteur(t){
     saveBlob(t.blob, `${t.id}.${t.ext}`);
@@ -853,7 +849,7 @@
     const m = etats()[id] || {}, v = store.get("valides", {})[id];
     if (m.publie) return { cls:"ok", txt:"Publié · prises libérées le " + new Date(m.publie).toLocaleDateString("fr-FR") };
     if (m.valide) return { cls:"ok", txt:"Montage validé le " + new Date(m.valide).toLocaleDateString("fr-FR") + ", envoyé dans Photos" };
-    if (m.retouche) return { cls:"", txt:"Retouche demandée le " + new Date(m.retouche).toLocaleDateString("fr-FR") + " : la nouvelle version remplacera l'ancienne dans Reels montés" };
+    if (m.retouche) return { cls:"", txt:"Retouche demandée le " + new Date(m.retouche).toLocaleDateString("fr-FR") + " : la nouvelle version arrivera dans Photos, album Reels VD" };
     if (v) return { cls:"", txt:"Prise validée : montage en cours ou prêt à vérifier" };
     return { cls:"", txt:"Pas encore tourné" };
   }
@@ -885,7 +881,7 @@
     saveBlob(new Blob([`ID: ${montageId}\nMONTAGE_VALIDE_LE: ${d.toLocaleDateString("fr-FR")} ${d.toLocaleTimeString("fr-FR")}\n`], { type:"text/plain;charset=utf-8" }), `${montageId}.montage-valide.txt`);
     noterMontage(montageId, "valide"); renderMontages(); ouvrirMontage(montageId);
     $("montageMsg").className = "msg ok";
-    $("montageMsg").innerHTML = "Montage validé. Vérifie que le téléchargement est terminé : ton iMac ajoute alors la vidéo et sa couverture dans <b>Photos</b>, album <b>Reels VD</b>, prêtes pour Instagram.";
+    $("montageMsg").innerHTML = "Montage validé. Vérifie que le téléchargement est terminé : un iMessage te confirmera qu'il est prêt à publier.";
   };
   $("publieOk").onclick = async () => {
     if (!montageId) return;
@@ -895,7 +891,7 @@
     const n = await libererPrises(montageId);
     noterMontage(montageId, "publie"); renderMontages(); ouvrirMontage(montageId);
     $("montageMsg").className = "msg ok";
-    $("montageMsg").textContent = n ? (n === 1 ? "1 prise supprimée de cet appareil." : n + " prises supprimées de cet appareil.") + " Ton Reel monté reste dans Reels montés." : "Aucune prise de ce Reel n'était gardée sur cet appareil.";
+    $("montageMsg").textContent = n ? (n === 1 ? "1 prise supprimée de cet appareil." : n + " prises supprimées de cet appareil.") + " Ton Reel monté reste dans Photos." : "Aucune prise de ce Reel n'était gardée sur cet appareil.";
   };
   $("retoucheOk").onclick = () => {
     if (!montageId) return;
@@ -909,7 +905,7 @@
       "",
       `RETOUCHE demandée par Valérie sur le Reel « ${s.title || montageId} ».`,
       "Valérie n'est pas devant l'écran : ne pose aucune question. Fais la retouche en suivant CLAUDE.md, GUIDE_STYLE.md et le skill monter-video, puis relis comme pour un montage.",
-      `Le montage actuel est dans iCloud Drive > Monteur VD > Reels montés (${montageId}.mp4, sa couverture et sa légende), le plan dans LIVRES/${montageId}_plan.json s'il existe, le rush dans A_MONTER/${montageId}.*.`,
+      `Le montage actuel est LIVRES/${montageId}.mp4 (avec sa couverture et sa légende), le plan dans LIVRES/${montageId}_plan.json s'il existe, le rush dans A_MONTER/${montageId}.*.`,
       `Ne refais pas tout : modifie seulement ce que Valérie demande, en repartant du plan existant, puis relance le montage. Livre la nouvelle version dans LIVRES sous le même nom (${montageId}.mp4, ${montageId}_couverture, ${montageId}_legende.txt) : elle remplacera l'ancienne.`,
       "",
       ...REGLES_VALERIE,
@@ -921,7 +917,7 @@
     saveBlob(new Blob([lignes.join("\n")], { type:"text/plain;charset=utf-8" }), `${montageId}.retouche.txt`);
     noterMontage(montageId, "retouche"); renderMontages(); ouvrirMontage(montageId);
     $("montageMsg").className = "msg ok";
-    $("montageMsg").innerHTML = "Retouche envoyée. Vérifie que le téléchargement est terminé : ton iMac refait le montage et te prévient par une notification. La nouvelle version remplacera l'ancienne dans <b>Reels montés</b>. Reviens ensuite ici pour la valider.";
+    $("montageMsg").innerHTML = "Retouche envoyée. Vérifie que le téléchargement est terminé : ton iMac refait le montage et te prévient par une notification. La nouvelle version arrivera dans <b>Photos, album Reels VD</b>, avec un iMessage. Reviens ensuite ici pour la valider.";
   };
 
   $("btnScripts").onclick = () => { $("editBox").style.display = "none"; renderList(); openModal("scriptsModal"); };

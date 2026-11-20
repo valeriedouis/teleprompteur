@@ -234,6 +234,12 @@
   <div class="row"><input type="checkbox" id="optIndic" checked><span>Afficher les indications de jeu (en petit, en vieux rose)</span></div>
   <div class="row"><input type="checkbox" id="optMiroir"><span>Texte inversé (pour une vitre de téléprompteur)</span></div>
   <div class="row"><input type="checkbox" id="optCount" checked><span>Compte à rebours de 3 secondes avant la prise</span></div>
+
+  <h3>Synchro iPhone et iMac</h3>
+  <p style="font-size:13px;margin:6px 0">Une seule fois, <b>sur l'iMac</b> : colle ton jeton GitHub, touche Activer et accepte le téléchargement. Ensuite, les statuts de tes Reels sont les mêmes partout.</p>
+  <p class="hint" id="synchroEtat"></p>
+  <input id="jetonIn" type="password" autocomplete="off" placeholder="github_pat_..." style="width:100%;padding:8px;border:1px solid var(--lin);border-radius:8px;font-size:14px">
+  <div class="actions"><button class="btn" id="jetonOk">🔄 Activer la synchro</button></div>
 </aside>
 
 <!-- Aide -->
@@ -1002,6 +1008,13 @@
   $("optMiroir").onchange = (e) => { S.miroir = e.target.checked; save(); applyLook(); };
   $("optCount").onchange = (e) => { S.count = e.target.checked; save(); };
   $("optSelfie").onchange = (e) => { S.selfie = e.target.checked; save(); applyLook(); };
+  $("jetonOk").onclick = () => {
+    const v = $("jetonIn").value.trim();
+    if (!/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(v)){ toast("Ce n'est pas un jeton GitHub (il commence par github_pat_)."); return; }
+    saveBlob(new Blob([`JETON: ${v}\n`], { type:"text/plain;charset=utf-8" }), "monteur-vd.synchro.txt");
+    $("jetonIn").value = "";
+    toast("Accepte le téléchargement : l'iMac active la synchro et t'envoie un iMessage 🔄.");
+  };
   $("optCamFond").onchange = (e) => { S.camfond = e.target.checked; save(); applyLook(); brancherVideos(); };
 
   /* ---------- Clavier ---------- */
@@ -1103,7 +1116,7 @@
   }
 
   /* ---------- Même version sur l'iPhone et l'iMac ---------- */
-  const VERSION = "2026-11-20.4";
+  const VERSION = "2026-11-20.5";
   function verifierVersion(){
     if (rec || !(location.protocol === "http:" || location.protocol === "https:")) return;
     fetch(location.pathname + "?v=" + Date.now(), { cache:"no-store" }).then(r => r.ok ? r.text() : "").then(t => {
@@ -1138,7 +1151,8 @@
       }
     } catch(e){}
   }
-  function apresEtat(){ if (!rec){ renderSelect(); } nettoyerPrisesRecues(); }
+  function majSynchroEtat(){ const m = ETAT_PARTAGE.maj || (Object.keys(ETAT_PARTAGE.reels || {}).length ? "oui" : ""); $("synchroEtat").textContent = m ? "✅ Synchro active." : "Synchro pas encore activée."; }
+  function apresEtat(){ majSynchroEtat(); if (!rec){ renderSelect(); } nettoyerPrisesRecues(); }
 
   /* ---------- Démarrage ---------- */
   applyLook(); renderSelect(); renderText();
@@ -1147,7 +1161,7 @@
   else if (fromLink) setTimeout(() => toast("Script « " + fromLink.title + " » prêt"), 400);
   Promise.all([loadTaskScripts(), chargerEtat()]).then(() => {
     const r = mergeTaskScripts();
-    nettoyerPrisesRecues();
+    nettoyerPrisesRecues(); majSynchroEtat();
     const nxt = fromLink ? null : pickUpcoming();
     if (nxt){ S.current = nxt.id; save(); }
     renderSelect(); renderText();

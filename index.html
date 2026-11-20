@@ -238,7 +238,7 @@
   <h3>Synchro iPhone et iMac</h3>
   <p style="font-size:13px;margin:6px 0">Une seule fois, <b>sur l'iMac</b> : colle ton jeton GitHub, touche Activer et accepte le téléchargement. Ensuite, les statuts de tes Reels sont les mêmes partout.</p>
   <p class="hint" id="synchroEtat"></p>
-  <input id="jetonIn" type="password" autocomplete="off" placeholder="github_pat_..." style="width:100%;padding:8px;border:1px solid var(--lin);border-radius:8px;font-size:14px">
+  <input id="jetonIn" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="github_pat_..." style="width:100%;padding:8px;border:1px solid var(--lin);border-radius:8px;font-size:14px">
   <div class="actions"><button class="btn" id="jetonOk">🔄 Activer la synchro</button></div>
 </aside>
 
@@ -1009,8 +1009,10 @@
   $("optCount").onchange = (e) => { S.count = e.target.checked; save(); };
   $("optSelfie").onchange = (e) => { S.selfie = e.target.checked; save(); applyLook(); };
   $("jetonOk").onclick = () => {
-    const v = $("jetonIn").value.trim();
-    if (!/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(v)){ toast("Ce n'est pas un jeton GitHub (il commence par github_pat_)."); return; }
+    const brut = $("jetonIn").value || "";
+    const m = brut.replace(/[\s\u200B-\u200D\uFEFF]/g, "").match(/(github_pat_[A-Za-z0-9_]{20,}|ghp_[A-Za-z0-9]{20,})/);
+    if (!m){ const net = brut.trim(); toast(net ? `Je lis « ${net.slice(0, 6)}… » (${net.length} caractères) : copie le jeton entier, il commence par github_pat_.` : "Colle d'abord ton jeton."); return; }
+    const v = m[1];
     saveBlob(new Blob([`JETON: ${v}\n`], { type:"text/plain;charset=utf-8" }), "monteur-vd.synchro.txt");
     $("jetonIn").value = "";
     toast("Accepte le téléchargement : l'iMac active la synchro et t'envoie un iMessage 🔄.");
@@ -1116,7 +1118,7 @@
   }
 
   /* ---------- Même version sur l'iPhone et l'iMac ---------- */
-  const VERSION = "2026-11-20.6";
+  const VERSION = "2026-11-20.7";
   function verifierVersion(){
     if (rec || !(location.protocol === "http:" || location.protocol === "https:")) return;
     fetch(location.pathname + "?v=" + Date.now(), { cache:"no-store" }).then(r => r.ok ? r.text() : "").then(t => {

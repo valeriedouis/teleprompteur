@@ -325,9 +325,13 @@
   <div class="card">
     <h2>Mes prises</h2>
     <p>Chaque prise est gardée sur cet appareil, même si tu fermes la page, jusqu'à ce que son Reel soit publié. Si une prise n'est pas arrivée au monteur, touche <b>Renvoyer au monteur</b> et accepte les 2 téléchargements.</p>
+    <div id="publieBox" style="border:1px solid var(--lin);border-radius:12px;padding:10px 12px;margin:10px 0">
+      <b>📣 Mon Reel est publié</b><br><small>Choisis le Reel, touche Publié : toutes ses prises sont supprimées de cet appareil. Le Reel monté reste dans Photos.</small>
+      <ul class="list" id="publieList"></ul>
+    </div>
     <p class="hint" id="prisesPlace"></p>
     <ul class="list" id="prisesList"></ul>
-    <div class="actions"><button class="btn" data-closemodal="prisesModal">Fermer</button></div>
+    <div class="actions"><button class="btn" id="toutSuppr">🗑️ Tout supprimer</button><button class="btn" data-closemodal="prisesModal">Fermer</button></div>
   </div>
 </div>
 
@@ -728,7 +732,7 @@
         t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
       });
     }
-    return { put: p => tx("readwrite", st => st.put(p)), all: () => tx("readonly", st => st.getAll()), del: k => tx("readwrite", st => st.delete(k)) };
+    return { put: p => tx("readwrite", st => st.put(p)), all: () => tx("readonly", st => st.getAll()), del: k => tx("readwrite", st => st.delete(k)), vider: () => tx("readwrite", st => st.clear()) };
   })();
   let persistDemande = false;
   async function garderPrise(t){
@@ -743,6 +747,7 @@
     }
   }
   async function libererPrises(id){
+    if (!prisesChargees){ prisesChargees = true; await chargerPrises(); }
     let n = 0;
     for (let k = takes.length - 1; k >= 0; k--){
       const t = takes[k]; if (t.id !== id) continue;
@@ -752,6 +757,12 @@
     }
     try { (await PRISES.all()).filter(p => p.id === id).forEach(p => { PRISES.del(p.key); n++; }); } catch(e){}
     return n;
+  }
+  let prisesChargees = false;
+  async function toutSupprimer(){
+    try { await PRISES.vider(); } catch(e){}
+    takes.forEach(t => { try { if (t.url) URL.revokeObjectURL(t.url); } catch(e){} });
+    takes.length = 0; prisesChargees = true;
   }
   async function chargerPrises(){
     try {
@@ -766,6 +777,22 @@
   }
   function taille(o){ return o > 1e9 ? (o / 1e9).toFixed(1).replace(".", ",") + " Go" : Math.round(o / 1e6) + " Mo"; }
   async function renderPrises(){
+    const pl = $("publieList"); pl.innerHTML = "";
+    const reels = [];
+    takes.forEach(t => { if (!reels.some(r => r.id === t.id)) reels.push({ id:t.id, title:t.title || t.id, n:takes.filter(o => o.id === t.id).length }); });
+    $("publieBox").style.display = reels.length ? "" : "none";
+    reels.forEach(r => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>${esc(r.title)}<br><small>${r.n} prise(s)</small></span>`;
+      const b = document.createElement("button"); b.className = "btn"; b.textContent = "✅ Publié";
+      b.onclick = async () => {
+        if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = "Confirmer : supprimer ses prises"; return; }
+        const n = await libererPrises(r.id); noterMontage(r.id, "publie");
+        toast(n + (n > 1 ? " prises supprimées." : " prise supprimée.") + " Ton Reel monté reste dans Photos.");
+        renderPrises();
+      };
+      li.appendChild(b); pl.appendChild(li);
+    });
     const ul = $("prisesList"); ul.innerHTML = "";
     if (!takes.length){ ul.innerHTML = "<li><span>Aucune prise gardée pour l'instant.</span></li>"; }
     takes.map((t, k) => [t, k]).reverse().forEach(([t, k]) => {
@@ -794,11 +821,16 @@
     try {
       const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null;
       const tot = takes.reduce((a, t) => a + (t.blob ? t.blob.size : 0), 0);
-      $("prisesPlace").textContent = `${takes.length} prise(s) gardée(s), ${taille(tot)}` + (est && est.quota ? ` · place disponible pour ce site : environ ${taille(Math.max(0, est.quota - est.usage))}` : "") + ". Elles sont supprimées quand tu touches « Il est publié » dans Mes montages.";
+      $("prisesPlace").textContent = `${takes.length} prise(s) gardée(s), ${taille(tot)}` + (est && est.quota ? ` · place disponible pour ce site : environ ${taille(Math.max(0, est.quota - est.usage))}` : "") + ". Elles sont supprimées quand tu touches ✅ Publié ci-dessus.";
     } catch(e){ $("prisesPlace").textContent = ""; }
   }
   function renderPrisesBientot(){ setTimeout(renderPrises, 300); }
-  let prisesChargees = false;
+  $("toutSuppr").onclick = async () => {
+    const b = $("toutSuppr");
+    if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = "Confirmer : tout supprimer (définitif)"; return; }
+    delete b.dataset.sure; b.textContent = "🗑️ Tout supprimer";
+    await toutSupprimer(); toast("Toutes les prises sont supprimées de cet appareil."); renderPrises();
+  };
   $("btnPrises").onclick = async () => { if (!prisesChargees){ prisesChargees = true; await chargerPrises(); } renderPrises(); openModal("prisesModal"); };
 
   /* ---------- Import et gestion des scripts ---------- */
@@ -1050,6 +1082,7 @@
 
   /* ---------- Démarrage ---------- */
   applyLook(); renderSelect(); renderText();
+  try { if (!localStorage.getItem("vdtp_purge_20261120")){ toutSupprimer().then(() => { prisesChargees = false; localStorage.setItem("vdtp_purge_20261120", "1"); }); } } catch(e){}
   if (fromLink && fromLink.montage) setTimeout(() => ouvrirMesMontages(fromLink.id), 300);
   else if (fromLink) setTimeout(() => toast("Script « " + fromLink.title + " » prêt"), 400);
   loadTaskScripts().then(() => {

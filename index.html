@@ -171,7 +171,7 @@
   <button class="btn rose" id="btnImport">+ Coller mes scripts</button>
   <button class="btn" id="btnScripts">Mes scripts</button>
   <button class="btn" id="btnPrises">Mes prises</button>
-  <button class="btn" id="btnMontages">Mes montages</button>
+  <button class="btn" id="btnMontages">📣 Mes Reels</button>
   <button class="btn" id="btnSettings">Réglages</button>
   <button class="btn" id="btnHelp">Aide</button>
 </header>
@@ -240,15 +240,13 @@
 <aside class="panel" id="help">
   <button class="btn close" data-close="help">Fermer</button>
   <h2>Mode d'emploi</h2>
-  <h3>Chaque semaine</h3>
+  <h3>Le parcours d'un Reel, en 5 étapes</h3>
   <ol>
-    <li>Le vendredi, ta tâche « Veille & contenu » prépare les 2 scripts de la semaine, puis ton Mac les recopie dans ton dossier iCloud Drive « Téléprompteur VD », à côté de ce fichier. À l'ouverture, le téléprompteur les charge tout seul et sélectionne le prochain Reel à tourner.</li>
-    <li>Si un script manque, tu peux toujours le coller avec <b>+ Coller mes scripts</b>.</li>
-    <li>Vérifie le Reel choisi en haut, place-toi face à une fenêtre, cadre-toi dans l'aperçu.</li>
-    <li>Clique sur <b>Tourner la prise</b> : 3, 2, 1, l'enregistrement démarre et le texte défile. Lis la ligne marquée par les petits triangles.</li>
-    <li>Ton Reel monté arrive dans l'app <b>Photos</b>, album <b>Reels VD</b> (légende dans les infos ⓘ), et un iMessage te prévient. Regarde-le, puis bouton <b>Mes montages</b> : <b>✓ Je valide ce montage</b> ou <b>✏️ Envoyer la retouche</b> avec tes corrections.</li>
-    <li>Une erreur ? <b>↺ Recommencer</b> : la prise repart de zéro (ton monteur ne coupe pas les phrases ratées).</li>
-    <li>À la fin, <b>Arrêter</b>, puis <b>▶ Lire ma prise</b>. Si elle te plaît, <b>✓ Valider ce Reel</b> : la prise part au monteur, qui la monte tout seul. Un iMessage te prévient quand ton Reel est prêt dans Photos, album Reels VD.</li>
+    <li><b>Tourner</b> : le Reel de la semaine est déjà chargé (menu en haut). Cadre-toi, <b>● Tourner la prise</b>, lis la ligne aux petits triangles, <b>■ Arrêter</b>. Une erreur ? Arrête et refais : le monteur garde la dernière prise.</li>
+    <li><b>Envoyer</b> : <b>▶ Lire ma prise</b>, puis <b>✓ Valider ce Reel</b> et accepte les 2 téléchargements. iMessage « 🎬 Prise bien reçue ».</li>
+    <li><b>Attendre</b> (10 min environ, iMac allumé) : iMessage « ✅ Reel prêt ».</li>
+    <li><b>Regarder</b> dans Photos, album <b>Reels VD</b> (légende dans ⓘ). Une correction ? <b>📣 Mes Reels</b> &gt; ✏️ retouche.</li>
+    <li><b>Publier</b> sur Instagram (ou Metricool) avec la vidéo et la légende de Photos, puis <b>📣 Mes Reels</b> &gt; <b>📣 C'est publié</b> : prises et fichiers de travail partent à la corbeille, le Reel reste dans Photos. iMessage « 🧹 ».</li>
   </ol>
   <h3>Filmer avec ton iPhone</h3>
   <p>Avec la Caméra de continuité d'Apple, ton iPhone devient la caméra de ton Mac : fixe-le en haut de l'écran, à la verticale, verrouillé, puis choisis-le dans Réglages &gt; Caméra. Tu gardes la qualité de l'iPhone et le texte défile juste en dessous de son objectif.</p>
@@ -300,21 +298,18 @@
 <!-- Valider ou retoucher un montage -->
 <div class="modal" id="montageModal">
   <div class="card">
-    <h2>Mes montages</h2>
-    <p>Regarde ton Reel monté dans l'app <b>Photos</b>, album <b>Reels VD</b>, puis reviens ici pour le valider ou demander une retouche.</p>
+    <h2>Mes Reels</h2>
+    <p>Ton Reel monté arrive dans l'app <b>Photos</b>, album <b>Reels VD</b> (légende dans ⓘ). Choisis-le ci-dessous, puis : <b>une retouche</b>, ou <b>publie-le</b> et touche <b>📣 C'est publié</b>.</p>
     <ul class="list" id="montageList"></ul>
     <div id="montageBox" style="display:none">
       <h3 id="montageTitre" style="margin:18px 0 4px;font-weight:500"></h3>
       <p class="hint" id="montageEtat"></p>
-      <div class="actions">
-        <button class="btn valid" id="montageOk">✓ Je valide ce montage</button>
-      </div>
-      <p style="margin-top:16px"><b>Ou demande une retouche</b> : écris simplement ce que tu veux changer.</p>
+      <p style="margin-top:12px"><b>✏️ Une retouche ?</b> Écris simplement ce que tu veux changer.</p>
       <textarea id="retoucheTexte" style="height:120px" placeholder="Exemple : le chiffre 66 % arrive trop tôt, décale-le d'une seconde. Corrige « Valérie » dans les sous-titres. Mets la couverture sur fond bleu nuit."></textarea>
       <div class="actions"><button class="btn plein" id="retoucheOk">✏️ Envoyer la retouche au monteur</button></div>
       <div class="msg" id="montageMsg"></div>
-      <p style="margin-top:16px"><b>Ce Reel est publié ?</b> Tes prises de ce Reel sont gardées sur cet appareil jusqu'à ce que tu le confirmes ici.</p>
-      <div class="actions"><button class="btn" id="publieOk">📣 Il est publié : libérer mes prises</button></div>
+      <p style="margin-top:16px"><b>📣 Publié sur Instagram ?</b> Touche le bouton et accepte le téléchargement : les prises de cet appareil et les fichiers de travail de l'iMac partent à la corbeille. Le Reel reste dans Photos.</p>
+      <div class="actions"><button class="btn valid" id="publieOk">📣 C'est publié : faire le ménage</button></div>
     </div>
     <div class="actions"><button class="btn" data-closemodal="montageModal">Fermer</button></div>
   </div>
@@ -326,7 +321,7 @@
     <h2>Mes prises</h2>
     <p>Chaque prise est gardée sur cet appareil, même si tu fermes la page, jusqu'à ce que son Reel soit publié. Si une prise n'est pas arrivée au monteur, touche <b>Renvoyer au monteur</b> et accepte les 2 téléchargements.</p>
     <div id="publieBox" style="border:1px solid var(--lin);border-radius:12px;padding:10px 12px;margin:10px 0">
-      <b>📣 Mon Reel est publié</b><br><small>Choisis le Reel, touche Publié : toutes ses prises sont supprimées de cet appareil. Le Reel monté reste dans Photos.</small>
+      <b>📣 Mon Reel est publié</b><br><small>Touche ✅ Publié et accepte le téléchargement : ses prises (ici et sur l'iMac) partent à la corbeille. Le Reel reste dans Photos.</small>
       <ul class="list" id="publieList"></ul>
     </div>
     <p class="hint" id="prisesPlace"></p>
@@ -421,11 +416,13 @@
   function isIndic(line){ const l = line.trim(); return /^\(.*\)$/.test(l) || /^\*[^*]+\*$/.test(l) || /^_[^_]+_$/.test(l); }
   const esc = (s) => s.replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
 
-  function current(){ return scripts.find(s => s.id === S.current) || scripts[0]; }
+  function current(){ return scripts.find(s => s.id === S.current) || scripts.find(s => !estPublie(s.id)) || scripts[0]; }
 
   function renderSelect(){
     const sel = $("scriptSel"); sel.innerHTML = "";
-    scripts.forEach(s => { const o = document.createElement("option"); o.value = s.id; o.textContent = s.title + (s.id !== s.title ? "  (" + s.id + ")" : ""); sel.appendChild(o); });
+    let visibles = scripts.filter(s => !estPublie(s.id) || s.id === S.current);
+    if (!visibles.length) visibles = scripts;
+    visibles.forEach(s => { const o = document.createElement("option"); o.value = s.id; o.textContent = s.title + (s.id !== s.title ? "  (" + s.id + ")" : ""); sel.appendChild(o); });
     const c = current(); if (c) { S.current = c.id; sel.value = c.id; }
   }
   function renderText(){
@@ -460,42 +457,52 @@
     const duree = n / S.wpm * 60;
     return contentHeight() / duree;
   }
+  let cacheVit = 0, cacheFin = 0, cacheOff = 0;
+  function mesurer(){ cacheFin = contentHeight(); cacheVit = speedPx(); cacheOff = startOffset(); }
   function tick(t){
     if (playing){
       const dt = last ? (t - last) / 1000 : 0;
-      pos += speedPx() * Math.min(dt, 0.1);
-      const end = contentHeight();
+      if (!cacheFin) mesurer();
+      pos += cacheVit * Math.min(dt, 0.1);
+      const end = cacheFin;
       if (pos >= end){ pos = end; if (!ended){ ended = true; $("endHint").style.display = rec ? "block" : "none"; } setPlaying(false); }
-      draw();
+      $("textWrap").style.transform = `translate3d(0,${cacheOff - pos}px,0)`;
     }
     last = t;
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
-  function setPlaying(v){ playing = v; $("btnPlay").textContent = v ? "❚❚ Pause" : "▶ Défiler"; }
+  function setPlaying(v){ if (v) mesurer(); playing = v; $("btnPlay").textContent = v ? "❚❚ Pause" : "▶ Défiler"; }
   $("btnPlay").onclick = () => { if (pos >= contentHeight()) resetScroll(); setPlaying(!playing); };
   $("prompter").addEventListener("wheel", (e) => { e.preventDefault(); pos = Math.max(0, Math.min(contentHeight(), pos + e.deltaY)); draw(); }, { passive:false });
-  window.addEventListener("resize", draw);
+  window.addEventListener("resize", () => { cacheFin = 0; draw(); });
 
-  function setWpm(v){ S.wpm = Math.max(60, Math.min(260, v)); save(); $("wpmVal").textContent = S.wpm; const c = current(); if (c){ const n = wordsOf(c.text); $("scriptInfo").textContent = `${n} mots · environ ${Math.round(n / S.wpm * 60)} s à ${S.wpm} mots/min` + (c.note ? " · " + c.note : ""); } }
+  function setWpm(v){ S.wpm = Math.max(60, Math.min(260, v)); save(); cacheFin = 0; $("wpmVal").textContent = S.wpm; const c = current(); if (c){ const n = wordsOf(c.text); $("scriptInfo").textContent = `${n} mots · environ ${Math.round(n / S.wpm * 60)} s à ${S.wpm} mots/min` + (c.note ? " · " + c.note : ""); } }
   $("faster").onclick = () => setWpm(S.wpm + 10);
   $("slower").onclick = () => setWpm(S.wpm - 10);
 
   /* ---------- Caméra et micro ---------- */
   let stream = null, audioCtx = null, analyser = null, camOk = false;
+  const MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  function brancherVideos(){
+    // sur téléphone, une seule vidéo de la caméra à l'écran (deux, c'est trop lourd)
+    if (!stream) return;
+    if (MOBILE){ $("camVideo").srcObject = S.camfond ? null : stream; $("bgVideo").srcObject = S.camfond ? stream : null; }
+    else { $("camVideo").srcObject = stream; $("bgVideo").srcObject = stream; }
+  }
   async function openMedia(){
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("nosupport");
     if (stream) stream.getTracks().forEach(t => t.stop());
     const v = { width:{ ideal:1920 }, height:{ ideal:1080 }, frameRate:{ ideal:30 } };
     if (S.cam) v.deviceId = { exact:S.cam };
-    const a = { echoCancellation:false, noiseSuppression:false, autoGainControl:false };
+    const a = MOBILE ? {} : { echoCancellation:false, noiseSuppression:false, autoGainControl:false };
     if (S.mic) a.deviceId = { exact:S.mic };
     try { stream = await navigator.mediaDevices.getUserMedia({ video:v, audio:a }); }
     catch(e){
       if (S.cam || S.mic){ S.cam = ""; S.mic = ""; save(); stream = await navigator.mediaDevices.getUserMedia({ video:{ width:{ideal:1920}, height:{ideal:1080} }, audio:a }); }
       else throw e;
     }
-    $("camVideo").srcObject = stream; $("bgVideo").srcObject = stream;
+    brancherVideos();
     $("noCam").style.display = "none"; camOk = true;
     $("camVideo").onloadedmetadata = () => { const vt = $("camVideo"); $("preview").classList.remove("paysage"); };
     await listDevices();
@@ -517,6 +524,7 @@
     fill($("camSel"), "videoinput", cur); fill($("micSel"), "audioinput", curA);
   }
   function setupMeter(){
+    if (MOBILE) return; // sur iPhone, pas de vumètre : le micro reste entièrement au service de l'enregistrement
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === "suspended") audioCtx.resume();
@@ -525,6 +533,7 @@
       const buf = new Uint8Array(analyser.fftSize);
       const loop = () => {
         if (!analyser) return;
+        if (MOBILE && rec){ setTimeout(() => requestAnimationFrame(loop), 500); return; }
         analyser.getByteTimeDomainData(buf);
         let peak = 0; for (let i = 0; i < buf.length; i++) peak = Math.max(peak, Math.abs(buf[i] - 128));
         $("vuBar").style.width = Math.min(100, peak / 128 * 160) + "%";
@@ -585,7 +594,7 @@
     const mime = pickMime();
     const rs = recordingStream();
     chunks = []; discard = false;
-    const debit = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 4000000 : 8000000;
+    const debit = MOBILE ? 4000000 : 8000000;
     try { rec = mime ? new MediaRecorder(rs, { mimeType:mime, videoBitsPerSecond:debit }) : new MediaRecorder(rs); }
     catch(e){ rec = new MediaRecorder(rs); }
     const usedMime = rec.mimeType || mime || "video/webm";
@@ -604,7 +613,7 @@
       showTakes(takes.length - 1);
       setTimeout(() => garderPrise(nt), 800);
     };
-    rec.start(); // un seul fichier à l'arrêt : son et image restent calés
+    if (MOBILE) rec.start(1000); else rec.start(); // un seul fichier à l'arrêt : son et image restent calés
     recStart = Date.now();
     document.body.classList.add("rec"); $("btnRec").textContent = "■ Arrêter";
     recTimer = setInterval(updTimer, 250); updTimer();
@@ -696,7 +705,7 @@
     try { const ok = store.get("valides", {}); ok[t.id] = new Date().toISOString(); store.set("valides", ok); } catch(e){}
     try { const cc = current(); if (cc && cc.id === t.id) { const tmp = pos; renderText(); pos = tmp; draw(); } } catch(e){}
     $("takeMsg").className = "msg ok";
-    $("takeMsg").innerHTML = "Ta prise est partie au monteur. Vérifie que tes 2 téléchargements sont terminés. Ta prise reste gardée sur cet appareil jusqu'à la publication : si elle n'arrive pas, bouton <b>Mes prises</b> puis <b>Renvoyer au monteur</b>. Ton iMac la monte tout seul et te prévient par iMessage. Ton Reel t'attendra dans <b>Photos, album Reels VD</b>. Regarde-le, puis valide-le ou demande une retouche avec le bouton <b>Mes montages</b>.";
+    $("takeMsg").innerHTML = "Ta prise est partie au monteur. Vérifie que tes 2 téléchargements sont terminés. Ta prise reste gardée sur cet appareil jusqu'à la publication : si elle n'arrive pas, bouton <b>Mes prises</b> puis <b>Renvoyer au monteur</b>. Ton iMac la monte tout seul et te prévient par iMessage. Ton Reel t'attendra dans <b>Photos, album Reels VD</b>. Regarde-le : une retouche ou c'est publié, tout se fait dans <b>📣 Mes Reels</b>.";
   };
   function envoyerAuMonteur(t){
     saveBlob(t.blob, `${t.id}.${t.ext}`);
@@ -746,6 +755,10 @@
       toast("Cette prise n'a pas pu être gardée sur l'appareil : utilise « Enregistrer sans monter » pour ne pas la perdre.");
     }
   }
+  function signalerPublie(id){
+    const d = new Date();
+    saveBlob(new Blob([`ID: ${id}\nPUBLIE_LE: ${d.toLocaleDateString("fr-FR")} ${d.toLocaleTimeString("fr-FR")}\n`], { type:"text/plain;charset=utf-8" }), `${id}.publie.txt`);
+  }
   async function libererPrises(id){
     if (!prisesChargees){ prisesChargees = true; await chargerPrises(); }
     let n = 0;
@@ -765,6 +778,7 @@
     takes.length = 0; prisesChargees = true;
   }
   async function chargerPrises(){
+    await chargerEtat(); await nettoyerPrisesRecues();
     try {
       const m = store.get("montages", {});
       const all = await PRISES.all();
@@ -787,8 +801,8 @@
       const b = document.createElement("button"); b.className = "btn"; b.textContent = "✅ Publié";
       b.onclick = async () => {
         if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = "Confirmer : supprimer ses prises"; return; }
-        const n = await libererPrises(r.id); noterMontage(r.id, "publie");
-        toast(n + (n > 1 ? " prises supprimées." : " prise supprimée.") + " Ton Reel monté reste dans Photos.");
+        signalerPublie(r.id); const n = await libererPrises(r.id); noterMontage(r.id, "publie");
+        toast(n + (n > 1 ? " prises supprimées." : " prise supprimée.") + " Accepte le téléchargement : l'iMac fait son ménage. Ton Reel reste dans Photos.");
         renderPrises();
       };
       li.appendChild(b); pl.appendChild(li);
@@ -882,16 +896,22 @@
   let montageId = null;
   const etats = () => store.get("montages", {});
   function etatMontage(id){
-    const m = etats()[id] || {}, v = store.get("valides", {})[id];
-    if (m.publie) return { cls:"ok", txt:"Publié · prises libérées le " + new Date(m.publie).toLocaleDateString("fr-FR") };
+    const m = etats()[id] || {}, v = store.get("valides", {})[id], e = ep(id);
+    const jour = (x) => new Date(x).toLocaleString("fr-FR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" });
+    if (e.publie) return { cls:"ok", txt:"✅ Publié le " + jour(e.publie) + " · ménage fait" };
+    if (e.retouche && (!e.prete || e.retouche > e.prete)) return { cls:"", txt:"✏️ Retouche reçue par l'iMac le " + jour(e.retouche) + " : nouvelle version bientôt dans Photos" };
+    if (e.bloque && (!e.prete || e.bloque > e.prete)) return { cls:"", txt:"⚠️ Montage bloqué le " + jour(e.bloque) + " : regarde ton iMessage" };
+    if (e.prete) return { cls:"ok", txt:"✅ Prêt dans Photos (album Reels VD) depuis le " + jour(e.prete) };
+    if (e.recue) return { cls:"", txt:"🎬 Prise reçue par l'iMac le " + jour(e.recue) + " : montage en cours" };
+    if (m.publie) return { cls:"ok", txt:"✅ Publié le " + new Date(m.publie).toLocaleDateString("fr-FR") + " · ménage fait" };
     if (m.valide) return { cls:"ok", txt:"Montage validé le " + new Date(m.valide).toLocaleDateString("fr-FR") + ", envoyé dans Photos" };
     if (m.retouche) return { cls:"", txt:"Retouche demandée le " + new Date(m.retouche).toLocaleDateString("fr-FR") + " : la nouvelle version arrivera dans Photos, album Reels VD" };
-    if (v) return { cls:"", txt:"Prise validée : montage en cours ou prêt à vérifier" };
+    if (v) return { cls:"", txt:"Envoyé au monteur : attends l'iMessage ✅ Reel prêt, puis regarde dans Photos" };
     return { cls:"", txt:"Pas encore tourné" };
   }
   function renderMontages(){
     const ul = $("montageList"); ul.innerHTML = "";
-    scripts.filter(s => /^\d{4}-\d{2}-\d{2}/.test(s.id)).sort((a, b) => b.id.localeCompare(a.id)).slice(0, 8).forEach(s => {
+    scripts.filter(s => /^\d{4}-\d{2}-\d{2}/.test(s.id)).sort((a, b) => b.id.localeCompare(a.id)).slice(0, 10).forEach(s => {
       const e = etatMontage(s.id);
       const li = document.createElement("li");
       li.innerHTML = `<span>${esc(s.title)}<br><small>${esc(e.txt)}</small></span>`;
@@ -910,8 +930,8 @@
   }
   function ouvrirMesMontages(id){ renderMontages(); $("montageBox").style.display = "none"; openModal("montageModal"); if (id) ouvrirMontage(id); }
   function noterMontage(id, cle){ const m = etats(); m[id] = Object.assign({}, m[id], { [cle]: new Date().toISOString() }); if (cle === "retouche") delete m[id].valide; store.set("montages", m); }
-  $("btnMontages").onclick = () => ouvrirMesMontages(null);
-  $("montageOk").onclick = () => {
+  $("btnMontages").onclick = () => { ouvrirMesMontages(null); chargerEtat().then(() => { renderMontages(); if (montageId) $("montageEtat").textContent = etatMontage(montageId).txt + " · fichier : " + montageId + ".mp4"; }); };
+  if ($("montageOk")) $("montageOk").onclick = () => {
     if (!montageId) return;
     const d = new Date();
     saveBlob(new Blob([`ID: ${montageId}\nMONTAGE_VALIDE_LE: ${d.toLocaleDateString("fr-FR")} ${d.toLocaleTimeString("fr-FR")}\n`], { type:"text/plain;charset=utf-8" }), `${montageId}.montage-valide.txt`);
@@ -922,12 +942,13 @@
   $("publieOk").onclick = async () => {
     if (!montageId) return;
     const b = $("publieOk");
-    if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = "Confirmer : supprimer mes prises de ce Reel"; return; }
-    delete b.dataset.sure; b.textContent = "📣 Il est publié : libérer mes prises";
+    if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = "Confirmer : il est bien publié"; return; }
+    delete b.dataset.sure; b.textContent = "📣 C'est publié : faire le ménage";
+    signalerPublie(montageId);
     const n = await libererPrises(montageId);
     noterMontage(montageId, "publie"); renderMontages(); ouvrirMontage(montageId);
     $("montageMsg").className = "msg ok";
-    $("montageMsg").textContent = n ? (n === 1 ? "1 prise supprimée de cet appareil." : n + " prises supprimées de cet appareil.") + " Ton Reel monté reste dans Photos." : "Aucune prise de ce Reel n'était gardée sur cet appareil.";
+    $("montageMsg").textContent = (n ? (n === 1 ? "1 prise supprimée de cet appareil. " : n + " prises supprimées de cet appareil. ") : "") + "Accepte le téléchargement : l'iMac fait son ménage et t'envoie un iMessage 🧹. Ton Reel reste dans Photos.";
   };
   $("retoucheOk").onclick = () => {
     if (!montageId) return;
@@ -981,7 +1002,7 @@
   $("optMiroir").onchange = (e) => { S.miroir = e.target.checked; save(); applyLook(); };
   $("optCount").onchange = (e) => { S.count = e.target.checked; save(); };
   $("optSelfie").onchange = (e) => { S.selfie = e.target.checked; save(); applyLook(); };
-  $("optCamFond").onchange = (e) => { S.camfond = e.target.checked; save(); applyLook(); };
+  $("optCamFond").onchange = (e) => { S.camfond = e.target.checked; save(); applyLook(); brancherVideos(); };
 
   /* ---------- Clavier ---------- */
   document.addEventListener("keydown", (e) => {
@@ -1052,7 +1073,8 @@
     const today = isoDay(new Date());
     const dated = scripts.filter(s => /^\d{4}-\d{2}-\d{2}/.test(s.id)).sort((a, b) => a.id.localeCompare(b.id));
     const valides = store.get("valides", {});
-    const next = dated.find(s => s.id.slice(0, 10) >= today && !valides[s.id]) || dated.find(s => s.id.slice(0, 10) >= today);
+    const fait = (id) => valides[id] || ep(id).recue || ep(id).prete || estPublie(id);
+    const next = dated.find(s => s.id.slice(0, 10) >= today && !fait(s.id)) || dated.find(s => s.id.slice(0, 10) >= today && !estPublie(s.id));
     return next || dated[dated.length - 1] || null;
   }
 
@@ -1080,13 +1102,52 @@
     try { history.replaceState(null, "", location.pathname + location.search); } catch(e){}
   }
 
+  /* ---------- Même version sur l'iPhone et l'iMac ---------- */
+  const VERSION = "2026-11-20.4";
+  function verifierVersion(){
+    if (rec || !(location.protocol === "http:" || location.protocol === "https:")) return;
+    fetch(location.pathname + "?v=" + Date.now(), { cache:"no-store" }).then(r => r.ok ? r.text() : "").then(t => {
+      const m = t.match(/const VERSION = "([^"]+)"/);
+      if (!m || m[1] === VERSION || rec) return;
+      try { if (sessionStorage.getItem("vdtp_maj_" + m[1])) return; sessionStorage.setItem("vdtp_maj_" + m[1], "1"); } catch(e){}
+      location.replace(location.pathname + "?maj=" + encodeURIComponent(m[1]) + location.hash);
+    }).catch(() => {});
+  }
+  verifierVersion();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden){ verifierVersion(); chargerEtat().then(apresEtat); } });
+
+  /* ---------- Statuts partagés (écrits par l'iMac dans etat.json) ---------- */
+  let ETAT_PARTAGE = { reels:{} };
+  function ep(id){ return (ETAT_PARTAGE.reels && ETAT_PARTAGE.reels[id]) || {}; }
+  function estPublie(id){ return !!(ep(id).publie || (etats()[id] || {}).publie); }
+  async function chargerEtat(){
+    if (!(location.protocol === "http:" || location.protocol === "https:")) return;
+    try { const r = await fetch("etat.json?v=" + Date.now(), { cache:"no-store" }); if (r.ok){ const j = await r.json(); if (j && j.reels) ETAT_PARTAGE = j; } } catch(e){}
+  }
+  // une prise bien reçue par l'iMac y est gardée jusqu'à la publication : la copie de cet appareil ne sert plus
+  async function nettoyerPrisesRecues(){
+    try {
+      const all = await PRISES.all();
+      for (const p of all){
+        const e = ep(p.id), recue = e.recue ? new Date(e.recue) : null;
+        if (e.publie || (recue && p.cree && recue >= new Date(p.cree))){
+          await PRISES.del(p.key);
+          const i = takes.findIndex(t => t.key === p.key);
+          if (i >= 0){ try { if (takes[i].url) URL.revokeObjectURL(takes[i].url); } catch(e2){} takes.splice(i, 1); }
+        }
+      }
+    } catch(e){}
+  }
+  function apresEtat(){ if (!rec){ renderSelect(); } nettoyerPrisesRecues(); }
+
   /* ---------- Démarrage ---------- */
   applyLook(); renderSelect(); renderText();
   try { if (!localStorage.getItem("vdtp_purge_20261120")){ toutSupprimer().then(() => { prisesChargees = false; localStorage.setItem("vdtp_purge_20261120", "1"); }); } } catch(e){}
   if (fromLink && fromLink.montage) setTimeout(() => ouvrirMesMontages(fromLink.id), 300);
   else if (fromLink) setTimeout(() => toast("Script « " + fromLink.title + " » prêt"), 400);
-  loadTaskScripts().then(() => {
+  Promise.all([loadTaskScripts(), chargerEtat()]).then(() => {
     const r = mergeTaskScripts();
+    nettoyerPrisesRecues();
     const nxt = fromLink ? null : pickUpcoming();
     if (nxt){ S.current = nxt.id; save(); }
     renderSelect(); renderText();
@@ -1095,7 +1156,7 @@
   });
   window.addEventListener("load", () => { renderText(); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw());
-  window.__tp = { parseBlocks, wordsOf, get scripts(){ return scripts; }, get takes(){ return takes; }, PRISES, chargerPrises };
+  window.__tp = { get etat(){ return ETAT_PARTAGE; }, VERSION, parseBlocks, wordsOf, get scripts(){ return scripts; }, get takes(){ return takes; }, PRISES, chargerPrises };
 })();
 </script>
 </body>

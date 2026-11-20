@@ -968,7 +968,7 @@
       "",
       `RETOUCHE demandée par Valérie sur le Reel « ${s.title || montageId} ».`,
       "Valérie n'est pas devant l'écran : ne pose aucune question. Fais la retouche en suivant CLAUDE.md, GUIDE_STYLE.md et le skill monter-video, puis relis comme pour un montage.",
-      `Le montage actuel est LIVRES/${montageId}.mp4 (avec sa couverture et sa légende), le plan dans LIVRES/${montageId}_plan.json s'il existe, le rush dans A_MONTER/${montageId}.*.`,
+      `Le Reel fini n'existe plus que dans Photos : repars du rush A_MONTER/${montageId}.* et du plan LIVRES/${montageId}_plan.json (et du dossier LIVRES/${montageId}_travail s'il existe), et refais la vidéo, la couverture et la légende dans LIVRES avec les mêmes noms.`,
       `Ne refais pas tout : modifie seulement ce que Valérie demande, en repartant du plan existant, puis relance le montage. Livre la nouvelle version dans LIVRES sous le même nom (${montageId}.mp4, ${montageId}_couverture, ${montageId}_legende.txt) : elle remplacera l'ancienne.`,
       "",
       ...REGLES_VALERIE,
@@ -1116,7 +1116,7 @@
   }
 
   /* ---------- Même version sur l'iPhone et l'iMac ---------- */
-  const VERSION = "2026-11-20.5";
+  const VERSION = "2026-11-20.6";
   function verifierVersion(){
     if (rec || !(location.protocol === "http:" || location.protocol === "https:")) return;
     fetch(location.pathname + "?v=" + Date.now(), { cache:"no-store" }).then(r => r.ok ? r.text() : "").then(t => {

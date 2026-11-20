@@ -581,7 +581,8 @@
     const mime = pickMime();
     const rs = recordingStream();
     chunks = []; discard = false;
-    try { rec = mime ? new MediaRecorder(rs, { mimeType:mime, videoBitsPerSecond:8000000 }) : new MediaRecorder(rs); }
+    const debit = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 4000000 : 8000000;
+    try { rec = mime ? new MediaRecorder(rs, { mimeType:mime, videoBitsPerSecond:debit }) : new MediaRecorder(rs); }
     catch(e){ rec = new MediaRecorder(rs); }
     const usedMime = rec.mimeType || mime || "video/webm";
     rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
@@ -596,8 +597,8 @@
       const nt = { key: tid + "__" + Date.now(), cree: new Date().toISOString(), blob, url:URL.createObjectURL(blob), ext:extOf(usedMime), id:tid, dur:Math.round((Date.now() - recStart) / 1000),
                    title:(c ? c.title : ""), text:(c ? c.text : ""), commande:(c && c.commande) || "", lue:false, validee:false, envoyee:null };
       takes.push(nt);
-      garderPrise(nt);
       showTakes(takes.length - 1);
+      setTimeout(() => garderPrise(nt), 800);
     };
     rec.start(); // un seul fichier à l'arrêt : son et image restent calés
     recStart = Date.now();
@@ -631,6 +632,8 @@
       b.onclick = () => showTakes(k); list.appendChild(b);
     });
     const t = takes[i];
+    if (!t.url) t.url = URL.createObjectURL(t.blob);
+    takes.forEach(o => { if (o !== t && o.url && o.gardee){ try { URL.revokeObjectURL(o.url); } catch(e){} o.url = null; } });
     $("takeVideo").src = t.url;
     $("takeName").textContent = `${t.id}.${t.ext}`;
     $("takeMsg").textContent = ""; $("takeMsg").className = "msg";
@@ -756,7 +759,7 @@
       const all = await PRISES.all();
       for (const p of all){
         if (m[p.id] && m[p.id].publie){ await PRISES.del(p.key); continue; }
-        if (!takes.some(t => t.key === p.key)) takes.push(Object.assign({}, p, { url:URL.createObjectURL(p.blob), gardee:true }));
+        if (!takes.some(t => t.key === p.key)) takes.push(Object.assign({}, p, { url:null, gardee:true }));
       }
       takes.sort((a, b) => (a.cree || "").localeCompare(b.cree || ""));
     } catch(e){}
@@ -795,7 +798,8 @@
     } catch(e){ $("prisesPlace").textContent = ""; }
   }
   function renderPrisesBientot(){ setTimeout(renderPrises, 300); }
-  $("btnPrises").onclick = () => { renderPrises(); openModal("prisesModal"); };
+  let prisesChargees = false;
+  $("btnPrises").onclick = async () => { if (!prisesChargees){ prisesChargees = true; await chargerPrises(); } renderPrises(); openModal("prisesModal"); };
 
   /* ---------- Import et gestion des scripts ---------- */
   $("btnImport").onclick = () => { $("importText").value = ""; $("importMsg").textContent = ""; openModal("importModal"); setTimeout(() => $("importText").focus(), 50); };
@@ -1046,7 +1050,6 @@
 
   /* ---------- Démarrage ---------- */
   applyLook(); renderSelect(); renderText();
-  chargerPrises();
   if (fromLink && fromLink.montage) setTimeout(() => ouvrirMesMontages(fromLink.id), 300);
   else if (fromLink) setTimeout(() => toast("Script « " + fromLink.title + " » prêt"), 400);
   loadTaskScripts().then(() => {

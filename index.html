@@ -492,9 +492,27 @@
   const MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   function brancherVideos(){
     // sur téléphone, une seule vidéo de la caméra à l'écran (deux, c'est trop lourd)
+    // (comme avant le 20/11, ce qui marchait sur iPhone : la caméra branchée sur les deux vidéos, lecture forcée)
     if (!stream) return;
-    if (MOBILE){ $("camVideo").srcObject = S.camfond ? null : stream; $("bgVideo").srcObject = S.camfond ? stream : null; }
-    else { $("camVideo").srcObject = stream; $("bgVideo").srcObject = stream; }
+    ["camVideo", "bgVideo"].forEach(id => { const v = $(id); if (v.srcObject !== stream) v.srcObject = stream; v.muted = true; v.setAttribute("playsinline", ""); const p = v.play(); if (p && p.catch) p.catch(() => {}); });
+  }
+  // filet de sécurité : si l'image ne vient pas, on relance, puis on propose de toucher l'écran
+  function surveillerImage(){
+    setTimeout(() => {
+      const v = S.camfond ? $("bgVideo") : $("camVideo");
+      if (!stream || (v.videoWidth > 0 && !v.paused)) return;
+      brancherVideos();
+      setTimeout(() => {
+        if (v.videoWidth > 0 && !v.paused) return;
+        const live = stream && stream.getVideoTracks()[0];
+        let b = document.getElementById("camAide");
+        if (!b){ b = document.createElement("div"); b.id = "camAide"; b.style.cssText = "position:fixed;left:12px;right:12px;top:110px;z-index:80;background:var(--coquille);color:var(--nuit);padding:14px 16px;border-radius:14px;font-size:15px;line-height:1.4;box-shadow:0 4px 18px rgba(0,0,0,.3)"; document.body.appendChild(b); }
+        b.textContent = "📷 La caméra ne s'affiche pas" + (live ? " (" + live.readyState + ")" : "") + ". Touche ce message. Si l'image ne vient toujours pas : ferme les autres apps qui utilisent la caméra (Instagram, Appareil photo, FaceTime), puis ferme et rouvre le téléprompteur.";
+        b.style.display = "block";
+        const relance = () => { brancherVideos(); setTimeout(() => { if (v.videoWidth > 0 && !v.paused) b.style.display = "none"; }, 800); document.removeEventListener("touchend", relance); document.removeEventListener("click", relance); };
+        document.addEventListener("touchend", relance); document.addEventListener("click", relance);
+      }, 1500);
+    }, 2000);
   }
   async function openMedia(){
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("nosupport");
@@ -508,7 +526,7 @@
       if (S.cam || S.mic){ S.cam = ""; S.mic = ""; save(); stream = await navigator.mediaDevices.getUserMedia({ video:{ width:{ideal:1920}, height:{ideal:1080} }, audio:a }); }
       else throw e;
     }
-    brancherVideos();
+    brancherVideos(); surveillerImage();
     $("noCam").style.display = "none"; camOk = true;
     $("camVideo").onloadedmetadata = () => { const vt = $("camVideo"); $("preview").classList.remove("paysage"); };
     await listDevices();
@@ -619,7 +637,7 @@
       showTakes(takes.length - 1);
       setTimeout(() => garderPrise(nt), 800);
     };
-    if (MOBILE) rec.start(1000); else rec.start(); // un seul fichier à l'arrêt : son et image restent calés
+    rec.start(); // un seul fichier à l'arrêt : son et image restent calés
     recStart = Date.now();
     document.body.classList.add("rec"); $("btnRec").textContent = "■ Arrêter";
     recTimer = setInterval(updTimer, 250); updTimer();
@@ -1118,7 +1136,7 @@
   }
 
   /* ---------- Même version sur l'iPhone et l'iMac ---------- */
-  const VERSION = "2026-11-20.7";
+  const VERSION = "2026-11-21.1";
   function verifierVersion(){
     if (rec || !(location.protocol === "http:" || location.protocol === "https:")) return;
     fetch(location.pathname + "?v=" + Date.now(), { cache:"no-store" }).then(r => r.ok ? r.text() : "").then(t => {

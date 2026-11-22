@@ -250,7 +250,7 @@
   <h3>Le parcours d'un Reel, en 5 étapes</h3>
   <ol>
     <li><b>Tourner</b> : le Reel de la semaine est déjà chargé (menu en haut). Cadre-toi, <b>● Tourner la prise</b>, lis la ligne aux petits triangles, <b>■ Arrêter</b>. Une erreur ? Arrête et refais : le monteur garde la dernière prise.</li>
-    <li><b>Envoyer</b> : <b>▶ Lire ma prise</b>, puis <b>✓ Valider ce Reel</b> et accepte les 2 téléchargements. iMessage « 🎬 Prise bien reçue ».</li>
+    <li><b>Envoyer</b> : à <b>■ Arrêter</b>, accepte le téléchargement : la prise part sur l'iMac et se voit ensuite sur tous tes appareils. Puis <b>▶ Lire ma prise</b>, <b>✓ Valider ce Reel</b> et accepte le téléchargement. iMessage « 🎬 Prise bien reçue ».</li>
     <li><b>Attendre</b> (10 min environ, iMac allumé) : iMessage « ✅ Reel prêt ».</li>
     <li><b>Regarder</b> dans Photos, album <b>Reels VD</b> (légende dans ⓘ). Une correction ? <b>📣 Mes Reels</b> &gt; ✏️ retouche.</li>
     <li><b>Publier</b> sur Instagram (ou Metricool) avec la vidéo et la légende de Photos, puis <b>📣 Mes Reels</b> &gt; <b>📣 C'est publié</b> : prises et fichiers de travail partent à la corbeille, le Reel reste dans Photos. iMessage « 🧹 ».</li>
@@ -356,7 +356,7 @@
     <div class="msg" id="takeMsg"></div>
     <div class="actions sec">
       <span>Nom du fichier : <span class="fname" id="takeName"></span></span>
-      <button class="btn lien" id="takeDl">📤 Garder sur l'iMac, sans monter</button>
+      <button class="btn lien" id="takeDl">📤 Renvoyer la prise sur l'iMac</button>
       <button class="btn lien" data-closemodal="takeModal">Fermer</button>
     </div>
   </div>
@@ -656,7 +656,7 @@
       takes.push(nt);
       showTakes(takes.length - 1);
       setTimeout(() => garderPrise(nt), 800);
-      if (!MOBILE) setTimeout(() => { mettreSurImac(nt); toast("Prise rangée sur l'iMac : tu la retrouves aussi dans Mes prises sur l'iPhone."); }, 300);
+      setTimeout(() => { mettreSurImac(nt); toast(MOBILE ? "Accepte le téléchargement : ta prise part sur l'iMac. Tu la retrouves ensuite sur l'iPhone comme sur l'iMac." : "Prise rangée sur l'iMac : tu la retrouves aussi dans Mes prises sur l'iPhone."); }, 300);
     };
     rec.start(); // un seul fichier à l'arrêt : son et image restent calés
     recStart = Date.now();
@@ -759,22 +759,21 @@
     t.surImac = nom; garderPrise(t);
     return nom;
   }
+  function recueParImac(t){ return !!(t.surImac && (ETAT_PARTAGE.prises || []).some(f => f.fichier === "prises/" + t.surImac)); }
   function envoyerAuMonteur(t, renvoi){
-    if (t.surImac && !renvoi){
-      // la prise est déjà partie sur l'iMac : on n'envoie que la consigne de montage
-      const txt = montageText(t).replace(/^(RUSH: .*)$/m, `$1\nPRISE: prises/${t.surImac}`);
-      saveBlob(new Blob([txt], { type:"text/plain;charset=utf-8" }), `${t.id}.montage.txt`);
-    } else {
-      saveBlob(t.blob, `${t.id}.${t.ext}`);
-      setTimeout(() => saveBlob(new Blob([montageText(t)], { type:"text/plain;charset=utf-8" }), `${t.id}.montage.txt`), 1500);
-    }
+    // la prise va dans le dossier des prises de l'iMac (visible sur tous les appareils), puis la consigne de montage la désigne
+    let delai = 0;
+    if (!t.surImac){ mettreSurImac(t); delai = 1500; }
+    else if (renvoi || !recueParImac(t)){ saveBlob(t.blob, t.surImac); delai = 1500; }
+    const txt = montageText(t).replace(/^(RUSH: .*)$/m, `$1\nPRISE: prises/${t.surImac}`);
+    setTimeout(() => saveBlob(new Blob([txt], { type:"text/plain;charset=utf-8" }), `${t.id}.montage.txt`), delai);
     t.validee = true; t.envoyee = new Date().toISOString();
     garderPrise(t);
   }
   $("takeDl").onclick = () => {
     const t = takes[shown]; if (!t) return;
-    if (!t.surImac) mettreSurImac(t);
-    $("takeMsg").className = "msg"; $("takeMsg").textContent = "Accepte le téléchargement : ta prise part sur l'iMac (iMessage 📥), sans montage. Tu la retrouves dans Mes prises sur l'iPhone comme sur l'iMac, avec le bouton 🎬 Monter celle-ci.";
+    if (!t.surImac) mettreSurImac(t); else if (!recueParImac(t)) saveBlob(t.blob, t.surImac);
+    $("takeMsg").className = "msg"; $("takeMsg").textContent = "Accepte le téléchargement : ta prise part sur l'iMac (iMessage 📥). Tu la retrouves dans Mes prises sur l'iPhone comme sur l'iMac, avec le bouton 🎬 Monter celle-ci.";
   };
   $("takeAgain").onclick = () => { closeModal("takeModal"); startTake(); };
 
@@ -902,9 +901,14 @@
       li.innerHTML = `<span>${esc(t.title || t.id)}<br><small>${esc(quand)} · ${t.dur} s · ${taille(t.blob.size)} · ${esc(etat)}${t.gardee === false ? " · ⚠️ non gardée" : ""}</small></span>`;
       const v = document.createElement("button"); v.className = "btn"; v.textContent = "Revoir"; v.onclick = () => { closeModal("prisesModal"); showTakes(k); };
       li.appendChild(v);
+      if (!t.validee){
+        const s2 = document.createElement("button"); s2.className = "btn"; s2.textContent = "📤 Envoyer sur l'iMac";
+        s2.onclick = () => { if (t.surImac) saveBlob(t.blob, t.surImac); else mettreSurImac(t); s2.textContent = "Envoyée ✓"; toast("Accepte le téléchargement : la prise part sur l'iMac."); };
+        li.appendChild(s2);
+      }
       if (t.validee){
         const r = document.createElement("button"); r.className = "btn"; r.textContent = "Renvoyer au monteur";
-        r.onclick = () => { envoyerAuMonteur(t, true); r.textContent = "Envoyée ✓"; toast("Accepte les 2 téléchargements : la vidéo, puis les indications."); renderPrisesBientot(); };
+        r.onclick = () => { envoyerAuMonteur(t, true); r.textContent = "Envoyée ✓"; toast("Accepte les téléchargements : la prise, puis les indications."); renderPrisesBientot(); };
         li.appendChild(r);
       }
       const d = document.createElement("button"); d.className = "btn"; d.textContent = "Supprimer";
@@ -1203,7 +1207,7 @@
   }
 
   /* ---------- Même version sur l'iPhone et l'iMac ---------- */
-  const VERSION = "2026-11-22.3";
+  const VERSION = "2026-11-22.4";
   function verifierVersion(){
     if (rec || !(location.protocol === "http:" || location.protocol === "https:")) return;
     fetch(location.pathname + "?v=" + Date.now(), { cache:"no-store" }).then(r => r.ok ? r.text() : "").then(t => {

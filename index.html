@@ -325,11 +325,15 @@
 <div class="modal" id="prisesModal">
   <div class="card">
     <h2>Mes prises</h2>
-    <p>Chaque prise est gardée sur cet appareil, même si tu fermes la page, jusqu'à ce que son Reel soit publié. Si une prise n'est pas arrivée au monteur, touche <b>Renvoyer au monteur</b> et accepte les 2 téléchargements.</p>
+    <p>Les prises <b>sur l'iMac</b> se voient sur tous tes appareils. Une prise filmée ici reste aussi gardée sur cet appareil, jusqu'à ce que l'iMac l'ait reçue.</p>
     <div id="publieBox" style="border:1px solid var(--lin);border-radius:12px;padding:10px 12px;margin:10px 0">
       <b>📣 Mon Reel est publié</b><br><small>Touche ✅ Publié et accepte le téléchargement : ses prises (ici et sur l'iMac) partent à la corbeille. Le Reel reste dans Photos.</small>
       <ul class="list" id="publieList"></ul>
     </div>
+    <h3 style="margin:14px 0 4px">🖥️ Sur l'iMac</h3>
+    <p class="hint" id="imacPlace"></p>
+    <ul class="list" id="imacList"></ul>
+    <h3 style="margin:14px 0 4px">📱 Sur cet appareil</h3>
     <p class="hint" id="prisesPlace"></p>
     <ul class="list" id="prisesList"></ul>
     <div class="actions"><button class="btn" id="toutSuppr">🗑️ Tout supprimer</button><button class="btn" data-closemodal="prisesModal">Fermer</button></div>
@@ -351,7 +355,7 @@
     <div class="msg" id="takeMsg"></div>
     <div class="actions sec">
       <span>Nom du fichier : <span class="fname" id="takeName"></span></span>
-      <button class="btn lien" id="takeDl">Enregistrer sans monter</button>
+      <button class="btn lien" id="takeDl">📤 Garder sur l'iMac, sans monter</button>
       <button class="btn lien" data-closemodal="takeModal">Fermer</button>
     </div>
   </div>
@@ -739,8 +743,11 @@
   }
   $("takeDl").onclick = () => {
     const t = takes[shown]; if (!t) return;
-    saveBlob(t.blob, `${t.id}.${t.ext}`);
-    $("takeMsg").className = "msg"; $("takeMsg").textContent = "Prise enregistrée, sans montage automatique.";
+    const d = new Date(), p2 = (n) => String(n).padStart(2, "0");
+    const nom = `${t.id}__prise__${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}.${t.ext}`;
+    saveBlob(t.blob, nom);
+    t.surImac = nom; garderPrise(t);
+    $("takeMsg").className = "msg"; $("takeMsg").textContent = "Accepte le téléchargement : ta prise part sur l'iMac (iMessage 📥), sans montage. Tu la retrouves dans Mes prises sur l'iPhone comme sur l'iMac, avec le bouton 🎬 Monter celle-ci.";
   };
   $("takeAgain").onclick = () => { closeModal("takeModal"); startTake(); };
 
@@ -771,7 +778,7 @@
   async function garderPrise(t){
     if (!t || !t.key) return;
     try {
-      await PRISES.put({ key:t.key, cree:t.cree, id:t.id, blob:t.blob, ext:t.ext, dur:t.dur, title:t.title, text:t.text, commande:t.commande, lue:!!t.lue, validee:!!t.validee, envoyee:t.envoyee || null });
+      await PRISES.put({ key:t.key, cree:t.cree, id:t.id, blob:t.blob, ext:t.ext, dur:t.dur, title:t.title, text:t.text, commande:t.commande, lue:!!t.lue, validee:!!t.validee, envoyee:t.envoyee || null, surImac:t.surImac || null });
       t.gardee = true;
       if (!persistDemande && navigator.storage && navigator.storage.persist){ persistDemande = true; navigator.storage.persist().catch(() => {}); }
     } catch(e){
@@ -814,7 +821,35 @@
     } catch(e){}
   }
   function taille(o){ return o > 1e9 ? (o / 1e9).toFixed(1).replace(".", ",") + " Go" : Math.round(o / 1e6) + " Mo"; }
+  function monterPriseImac(f){
+    const sc = scripts.find(x => x.id === f.id) || {};
+    const ext = (f.fichier.split(".").pop() || "mp4").toLowerCase();
+    const txt = montageText({ id:f.id, ext, title:sc.title || "", text:sc.text || "", commande:sc.commande || "" }).replace(/^(RUSH: .*)$/m, `$1\nPRISE: ${f.fichier}`);
+    saveBlob(new Blob([txt], { type:"text/plain;charset=utf-8" }), `${f.id}.montage.txt`);
+    try { const ok = store.get("valides", {}); ok[f.id] = new Date().toISOString(); store.set("valides", ok); } catch(e){}
+  }
+  function renderImac(){
+    const ul = $("imacList"); ul.innerHTML = "";
+    const liste = (ETAT_PARTAGE.prises || []).filter(f => !estPublie(f.id)).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    const synchro = !!(ETAT_PARTAGE.prises || Object.keys(ETAT_PARTAGE.reels || {}).length);
+    $("imacPlace").textContent = !synchro ? "Active la synchro (Réglages > Synchro iPhone et iMac) pour voir ici les prises de l'iMac." : (liste.length ? "Elles sont aussi dans le Finder : Monteur-VD > A_MONTER." : "Aucune prise sur l'iMac pour l'instant.");
+    const lib = { actuelle:"prise envoyée au monteur", gardee:"gardée, pas encore montée", ancienne:"ancienne prise" };
+    liste.forEach(f => {
+      const sc = scripts.find(x => x.id === f.id);
+      const quand = f.date ? new Date(f.date).toLocaleString("fr-FR", { weekday:"short", day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" }) : "";
+      const li = document.createElement("li");
+      li.innerHTML = `<span>${esc(sc ? sc.title : f.id)}<br><small>${esc(quand)} · ${taille(f.octets || 0)} · ${esc(lib[f.type] || "")}</small></span>`;
+      const b = document.createElement("button"); b.className = "btn"; b.textContent = "🎬 Monter celle-ci";
+      b.onclick = () => {
+        if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = "Confirmer le montage"; return; }
+        monterPriseImac(f); b.textContent = "Envoyé ✓"; b.disabled = true;
+        toast("Accepte le téléchargement : l'iMac monte cette prise et te prévient par iMessage.");
+      };
+      li.appendChild(b); ul.appendChild(li);
+    });
+  }
   async function renderPrises(){
+    renderImac();
     const pl = $("publieList"); pl.innerHTML = "";
     const reels = [];
     takes.forEach(t => { if (!reels.some(r => r.id === t.id)) reels.push({ id:t.id, title:t.title || t.id, n:takes.filter(o => o.id === t.id).length }); });
@@ -832,11 +867,11 @@
       li.appendChild(b); pl.appendChild(li);
     });
     const ul = $("prisesList"); ul.innerHTML = "";
-    if (!takes.length){ ul.innerHTML = "<li><span>Aucune prise gardée pour l'instant.</span></li>"; }
+    if (!takes.length){ ul.innerHTML = "<li><span>Aucune prise sur cet appareil.</span></li>"; }
     takes.map((t, k) => [t, k]).reverse().forEach(([t, k]) => {
       const li = document.createElement("li");
       const quand = t.cree ? new Date(t.cree).toLocaleString("fr-FR", { weekday:"short", day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" }) : "";
-      const etat = t.envoyee ? "envoyée au monteur le " + new Date(t.envoyee).toLocaleString("fr-FR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" }) : (t.validee ? "validée" : "pas encore validée");
+      const etat = t.surImac ? "envoyée sur l'iMac, en attente de réception" : t.envoyee ? "envoyée au monteur le " + new Date(t.envoyee).toLocaleString("fr-FR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" }) : (t.validee ? "validée" : "pas encore validée");
       li.innerHTML = `<span>${esc(t.title || t.id)}<br><small>${esc(quand)} · ${t.dur} s · ${taille(t.blob.size)} · ${esc(etat)}${t.gardee === false ? " · ⚠️ non gardée" : ""}</small></span>`;
       const v = document.createElement("button"); v.className = "btn"; v.textContent = "Revoir"; v.onclick = () => { closeModal("prisesModal"); showTakes(k); };
       li.appendChild(v);
@@ -869,7 +904,11 @@
     delete b.dataset.sure; b.textContent = "🗑️ Tout supprimer";
     await toutSupprimer(); toast("Toutes les prises sont supprimées de cet appareil."); renderPrises();
   };
-  $("btnPrises").onclick = async () => { if (!prisesChargees){ prisesChargees = true; await chargerPrises(); } renderPrises(); openModal("prisesModal"); };
+  $("btnPrises").onclick = async () => {
+    if (!prisesChargees){ prisesChargees = true; await chargerPrises(); }
+    renderPrises(); openModal("prisesModal");
+    await chargerEtat(); await nettoyerPrisesRecues(); renderPrises();
+  };
 
   /* ---------- Import et gestion des scripts ---------- */
   $("btnImport").onclick = () => { $("importText").value = ""; $("importMsg").textContent = ""; openModal("importModal"); setTimeout(() => $("importText").focus(), 50); };
@@ -1136,7 +1175,7 @@
   }
 
   /* ---------- Même version sur l'iPhone et l'iMac ---------- */
-  const VERSION = "2026-11-21.1";
+  const VERSION = "2026-11-22.1";
   function verifierVersion(){
     if (rec || !(location.protocol === "http:" || location.protocol === "https:")) return;
     fetch(location.pathname + "?v=" + Date.now(), { cache:"no-store" }).then(r => r.ok ? r.text() : "").then(t => {
@@ -1163,7 +1202,8 @@
       const all = await PRISES.all();
       for (const p of all){
         const e = ep(p.id), recue = e.recue ? new Date(e.recue) : null;
-        if (e.publie || (recue && p.cree && recue >= new Date(p.cree))){
+        const recueGardee = p.surImac && (ETAT_PARTAGE.prises || []).some(f => f.fichier === "prises/" + p.surImac);
+        if (e.publie || recueGardee || (recue && p.cree && recue >= new Date(p.cree))){
           await PRISES.del(p.key);
           const i = takes.findIndex(t => t.key === p.key);
           if (i >= 0){ try { if (takes[i].url) URL.revokeObjectURL(takes[i].url); } catch(e2){} takes.splice(i, 1); }

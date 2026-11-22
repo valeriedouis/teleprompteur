@@ -197,6 +197,7 @@
   <div id="bar">
     <button class="btn" id="btnRestart" title="Recommencer la prise depuis le début (touche 0)">↺ Recommencer</button>
     <button class="btn" id="btnPlay" title="Lancer ou mettre en pause le défilement (barre espace)">▶ Défiler</button>
+    <button class="btn" id="btnBack" title="Remonter de 2 lignes dans le script, même pendant la prise (flèche gauche). Tu peux aussi faire glisser le texte avec le doigt ou la molette.">⏫ Remonter</button>
     <button class="btn" id="btnRec" title="Compte à rebours puis enregistrement (touche R)">● Tourner la prise</button>
     <span id="timer">00:00</span>
     <span id="speedBox">Vitesse
@@ -484,7 +485,22 @@
   requestAnimationFrame(tick);
   function setPlaying(v){ if (v) mesurer(); playing = v; $("btnPlay").textContent = v ? "❚❚ Pause" : "▶ Défiler"; }
   $("btnPlay").onclick = () => { if (pos >= contentHeight()) resetScroll(); setPlaying(!playing); };
-  $("prompter").addEventListener("wheel", (e) => { e.preventDefault(); pos = Math.max(0, Math.min(contentHeight(), pos + e.deltaY)); draw(); }, { passive:false });
+  // remonter (ou avancer) dans le script à tout moment, même pendant la prise : molette, doigt, bouton ⏫
+  function deplacer(dy){
+    pos = Math.max(0, Math.min(cacheFin || contentHeight(), pos + dy));
+    if (dy < 0 && ended){ ended = false; $("endHint").style.display = "none"; if (rec) setPlaying(true); }
+    $("textWrap").style.transform = `translate3d(0,${(cacheOff || startOffset()) - pos}px,0)`;
+  }
+  $("prompter").addEventListener("wheel", (e) => { e.preventDefault(); deplacer(e.deltaY); }, { passive:false });
+  let doigtY = null;
+  $("prompter").addEventListener("touchstart", (e) => { if (e.touches.length === 1) doigtY = e.touches[0].clientY; }, { passive:true });
+  $("prompter").addEventListener("touchmove", (e) => {
+    if (doigtY === null || e.touches.length !== 1) return;
+    e.preventDefault();
+    const y = e.touches[0].clientY; deplacer(doigtY - y); doigtY = y;
+  }, { passive:false });
+  $("prompter").addEventListener("touchend", () => { doigtY = null; }, { passive:true });
+  $("btnBack").onclick = () => { const lh = parseFloat(getComputedStyle($("text")).lineHeight) || S.fs * 1.4; deplacer(-2 * lh); };
   window.addEventListener("resize", () => { cacheFin = 0; draw(); });
 
   function setWpm(v){ S.wpm = Math.max(60, Math.min(260, v)); save(); cacheFin = 0; $("wpmVal").textContent = S.wpm; const c = current(); if (c){ const n = wordsOf(c.text); $("scriptInfo").textContent = `${n} mots · environ ${Math.round(n / S.wpm * 60)} s à ${S.wpm} mots/min` + (c.note ? " · " + c.note : ""); } }
@@ -1099,7 +1115,8 @@
     else if (k === "+" || k === "="){ S.fs = Math.min(110, S.fs + 4); save(); applyLook(); draw(); }
     else if (k === "-" || k === "_"){ S.fs = Math.max(28, S.fs - 4); save(); applyLook(); draw(); }
     else if (k === "r" || k === "R"){ $("btnRec").click(); }
-    else if (k === "0" || k === "PageUp" || k === "ArrowLeft"){ e.preventDefault(); restartTake(); }
+    else if (k === "ArrowLeft"){ e.preventDefault(); $("btnBack").click(); }
+    else if (k === "0" || k === "PageUp"){ e.preventDefault(); restartTake(); }
     else if (k === "Escape"){ if (rec) stopTake(); }
     else if (k === "f" || k === "F"){ try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); } catch(err){} }
   });
@@ -1186,7 +1203,7 @@
   }
 
   /* ---------- Même version sur l'iPhone et l'iMac ---------- */
-  const VERSION = "2026-11-22.2";
+  const VERSION = "2026-11-22.3";
   function verifierVersion(){
     if (rec || !(location.protocol === "http:" || location.protocol === "https:")) return;
     fetch(location.pathname + "?v=" + Date.now(), { cache:"no-store" }).then(r => r.ok ? r.text() : "").then(t => {

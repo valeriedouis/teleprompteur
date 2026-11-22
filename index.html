@@ -640,6 +640,7 @@
       takes.push(nt);
       showTakes(takes.length - 1);
       setTimeout(() => garderPrise(nt), 800);
+      if (!MOBILE) setTimeout(() => { mettreSurImac(nt); toast("Prise rangée sur l'iMac : tu la retrouves aussi dans Mes prises sur l'iPhone."); }, 300);
     };
     rec.start(); // un seul fichier à l'arrêt : son et image restent calés
     recStart = Date.now();
@@ -733,20 +734,30 @@
     try { const ok = store.get("valides", {}); ok[t.id] = new Date().toISOString(); store.set("valides", ok); } catch(e){}
     try { const cc = current(); if (cc && cc.id === t.id) { const tmp = pos; renderText(); pos = tmp; draw(); } } catch(e){}
     $("takeMsg").className = "msg ok";
-    $("takeMsg").innerHTML = "Ta prise est partie au monteur. Vérifie que tes 2 téléchargements sont terminés. Ta prise reste gardée sur cet appareil jusqu'à la publication : si elle n'arrive pas, bouton <b>Mes prises</b> puis <b>Renvoyer au monteur</b>. Ton iMac la monte tout seul et te prévient par iMessage. Ton Reel t'attendra dans <b>Photos, album Reels VD</b>. Regarde-le : une retouche ou c'est publié, tout se fait dans <b>📣 Mes Reels</b>.";
+    $("takeMsg").innerHTML = "Ta prise est partie au monteur. Vérifie que tes téléchargements sont terminés. Ta prise reste gardée sur cet appareil jusqu'à la publication : si elle n'arrive pas, bouton <b>Mes prises</b> puis <b>Renvoyer au monteur</b>. Ton iMac la monte tout seul et te prévient par iMessage. Ton Reel t'attendra dans <b>Photos, album Reels VD</b>. Regarde-le : une retouche ou c'est publié, tout se fait dans <b>📣 Mes Reels</b>.";
   };
-  function envoyerAuMonteur(t){
-    saveBlob(t.blob, `${t.id}.${t.ext}`);
-    setTimeout(() => saveBlob(new Blob([montageText(t)], { type:"text/plain;charset=utf-8" }), `${t.id}.montage.txt`), 1500);
+  function mettreSurImac(t){
+    const d = new Date(), p2 = (n) => String(n).padStart(2, "0");
+    const nom = `${t.id}__prise__${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}.${t.ext}`;
+    saveBlob(t.blob, nom);
+    t.surImac = nom; garderPrise(t);
+    return nom;
+  }
+  function envoyerAuMonteur(t, renvoi){
+    if (t.surImac && !renvoi){
+      // la prise est déjà partie sur l'iMac : on n'envoie que la consigne de montage
+      const txt = montageText(t).replace(/^(RUSH: .*)$/m, `$1\nPRISE: prises/${t.surImac}`);
+      saveBlob(new Blob([txt], { type:"text/plain;charset=utf-8" }), `${t.id}.montage.txt`);
+    } else {
+      saveBlob(t.blob, `${t.id}.${t.ext}`);
+      setTimeout(() => saveBlob(new Blob([montageText(t)], { type:"text/plain;charset=utf-8" }), `${t.id}.montage.txt`), 1500);
+    }
     t.validee = true; t.envoyee = new Date().toISOString();
     garderPrise(t);
   }
   $("takeDl").onclick = () => {
     const t = takes[shown]; if (!t) return;
-    const d = new Date(), p2 = (n) => String(n).padStart(2, "0");
-    const nom = `${t.id}__prise__${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}.${t.ext}`;
-    saveBlob(t.blob, nom);
-    t.surImac = nom; garderPrise(t);
+    if (!t.surImac) mettreSurImac(t);
     $("takeMsg").className = "msg"; $("takeMsg").textContent = "Accepte le téléchargement : ta prise part sur l'iMac (iMessage 📥), sans montage. Tu la retrouves dans Mes prises sur l'iPhone comme sur l'iMac, avec le bouton 🎬 Monter celle-ci.";
   };
   $("takeAgain").onclick = () => { closeModal("takeModal"); startTake(); };
@@ -877,7 +888,7 @@
       li.appendChild(v);
       if (t.validee){
         const r = document.createElement("button"); r.className = "btn"; r.textContent = "Renvoyer au monteur";
-        r.onclick = () => { envoyerAuMonteur(t); r.textContent = "Envoyée ✓"; toast("Accepte les 2 téléchargements : la vidéo, puis les indications."); renderPrisesBientot(); };
+        r.onclick = () => { envoyerAuMonteur(t, true); r.textContent = "Envoyée ✓"; toast("Accepte les 2 téléchargements : la vidéo, puis les indications."); renderPrisesBientot(); };
         li.appendChild(r);
       }
       const d = document.createElement("button"); d.className = "btn"; d.textContent = "Supprimer";
@@ -1175,7 +1186,7 @@
   }
 
   /* ---------- Même version sur l'iPhone et l'iMac ---------- */
-  const VERSION = "2026-11-22.1";
+  const VERSION = "2026-11-22.2";
   function verifierVersion(){
     if (rec || !(location.protocol === "http:" || location.protocol === "https:")) return;
     fetch(location.pathname + "?v=" + Date.now(), { cache:"no-store" }).then(r => r.ok ? r.text() : "").then(t => {
